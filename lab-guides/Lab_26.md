@@ -13,7 +13,7 @@ library.
 
 I would recommend reading [Inserting Spark DataFrame to HBase
 table]
-before you proceed to the rest of the article where I explained Maven
+before you proceed to the rest of the lab where I explained Maven
 dependencies and their usage.
 
 

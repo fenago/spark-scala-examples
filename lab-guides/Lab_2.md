@@ -412,7 +412,7 @@ and SQL.
 6. Conclusion
 -------------
 
-In this Spark SparkSession article, you have learned what is Spark
+In this Spark SparkSession lab, you have learned what is Spark
 Session, its usage, how to create SparkSession programmatically, and
 finally learned some of the commonly used SparkSession methods.
 

@@ -182,7 +182,7 @@ transform the data using broadcast variable and yields below output.
 
 ### Conclusion
 
-In this Spark Broadcast variable article you have learned what is
+In this Spark Broadcast variable lab you have learned what is
 Broadcast variable, it's advantage and how to use in RDD and Dataframe
 with scala example.
 

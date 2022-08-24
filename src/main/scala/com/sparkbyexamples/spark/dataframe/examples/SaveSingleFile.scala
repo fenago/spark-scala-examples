@@ -24,7 +24,7 @@ object SaveSingleFile extends App{
 
   val srcPath=new Path("/tmp/address")
   val destPath= new Path("/tmp/address_merged.csv")
-  val srcFile=FileUtil.listFiles(new File("c:/tmp/address"))
+  val srcFile=FileUtil.listFiles(new File("/headless/tmp/address"))
     .filterNot(f=>f.getPath.endsWith(".csv"))(0)
   //Copy the CSV file outside of Directory and rename
   FileUtil.copy(srcFile,hdfs,destPath,true,hadoopConfig)

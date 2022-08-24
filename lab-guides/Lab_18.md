@@ -13,7 +13,7 @@ improvement].
 
 
 
-In this article, I will explain how to **Convert Spark RDD to
+In this lab, I will explain how to **Convert Spark RDD to
 Dataframe** and Dataset using several examples.
 
 -   [Create Spark
@@ -192,6 +192,6 @@ from [GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/ma
 Conclusion:
 -----------
 
-In this article, you have learned how to convert Spark RDD to DataFrame
+In this lab, you have learned how to convert Spark RDD to DataFrame
 and Dataset, we would need these frequently while working in Spark as
 these provides optimization and performance over RDD.

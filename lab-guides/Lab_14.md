@@ -5,7 +5,7 @@ Spark -- Difference between Cache and Persist?
 
 Spark *Cache* and *persist* are optimization techniques for iterative
 and interactive Spark applications to improve the performance of the
-jobs or applications. In this article, you will learn What is Spark
+jobs or applications. In this lab, you will learn What is Spark
 Caching and Persistence, the difference between `Cache()` and
 `Persist()` methods and how to use these two with RDD, DataFrame, and
 Dataset with Scala examples.
@@ -263,7 +263,7 @@ Some Points to note on Persistence
 Conclusion
 ----------
 
-In this article, you have learned Spark cache and Persist methods are
+In this lab, you have learned Spark cache and Persist methods are
 optimization techniques to save interim computation results and use them
 subsequently and learned what is the difference between Spark Cache and
 Persist and finally saw their syntaxes and usages with Scala examples.

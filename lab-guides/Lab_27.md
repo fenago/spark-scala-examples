@@ -9,7 +9,7 @@ Spark Read ORC file into DataFrame
 
 Spark natively supports ORC data source to read ORC into DataFrame and
 write it back to the ORC file format using `orc()` method of
-`DataFrameReader` and `DataFrameWriter`. In this article, I will explain
+`DataFrameReader` and `DataFrameWriter`. In this lab, I will explain
 how to read an ORC file into Spark DataFrame, proform some filtering,
 creating a table by reading the ORC file, and finally writing is back by
 partition using scala examples.

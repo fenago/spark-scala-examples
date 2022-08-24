@@ -186,7 +186,7 @@ columns. Supports all
 formats.
 
 **Note:** Besides the above options, Spark CSV dataset also supports
-many other options, [please refer to this article for
+many other options, [please refer to this lab for
 details](https://docs.databricks.com/data/data-sources/read-csv.html).
 
 Reading CSV files with a user-specified custom schema

@@ -21,7 +21,7 @@ object RangePartition extends App{
   val dfRange = data.toDF("id","count")
                .repartitionByRange(5,col("count"))
 
-  dfRange.write.option("header",true).csv("c:/tmp/range-partition")
+  dfRange.write.option("header",true).csv("/headless/tmp/range-partition")
   dfRange.write.partitionBy()
 
 }

@@ -22,7 +22,7 @@ file name and second value (\_2) is content of the file.
 
 
 
-In this article let's see some examples with both of these methods using
+In this lab let's see some examples with both of these methods using
 Scala and PySpark languages.
 
 -   [Read all text files from a directory into a single
@@ -41,7 +41,7 @@ Scala and PySpark languages.
     files]
 
 Before we start, let's assume we have the following file names and file
-contents at folder "c:/tmp/files" and I use these files to demonstrate
+contents at folder "/headless/tmp/files" and I use these files to demonstrate
 the examples.
 
   File Name     File Contents
@@ -62,7 +62,7 @@ a nested directory If it finds one Spark process fails with an error.
 
 
 ```
-val rdd = spark.sparkContext.textFile("C:/tmp/files/*")
+val rdd = spark.sparkContext.textFile("/headless/tmp/files/*")
 rdd.foreach(f=>{
     println(f)
 })
@@ -99,7 +99,7 @@ this returns an RDD\[Tuple2\]. where first value (\_1) in a tuple is a
 file name and second value (\_2) is content of the file.
 
 ```
-  val rddWhole = spark.sparkContext.wholeTextFiles("C:/tmp/files/*")
+  val rddWhole = spark.sparkContext.wholeTextFiles("/headless/tmp/files/*")
   rddWhole.foreach(f=>{
     println(f._1+"=>"+f._2)
   })
@@ -110,11 +110,11 @@ file name and second value (\_2) is content of the file.
 Yields below output.
 
 ```
-file:/C:/tmp/files/invalid.txt=>Invalid,I
-file:/C:/tmp/files/text01.txt=>One,1
-file:/C:/tmp/files/text02.txt=>Two,2
-file:/C:/tmp/files/text03.txt=>Three,3
-file:/C:/tmp/files/text04.txt=>Four,4
+file://headless/tmp/files/invalid.txt=>Invalid,I
+file://headless/tmp/files/text01.txt=>One,1
+file://headless/tmp/files/text02.txt=>Two,2
+file://headless/tmp/files/text03.txt=>Three,3
+file://headless/tmp/files/text04.txt=>Four,4
 ```
 
 
@@ -127,7 +127,7 @@ just input all file names with comma separator in order to create a
 single RDD.
 
 ```
-  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/text01.txt,C:/tmp/files/text02.txt")
+  val rdd3 = spark.sparkContext.textFile("/headless/tmp/files/text01.txt,/headless/tmp/files/text02.txt")
   rdd3.foreach(f=>{
     println(f)
   })
@@ -152,7 +152,7 @@ example below snippet read all files start with text and with the
 extension ".txt" and creates single RDD.
 
 ```
-  val rdd2 = spark.sparkContext.textFile("C:/tmp/files/text*.txt")
+  val rdd2 = spark.sparkContext.textFile("/headless/tmp/files/text*.txt")
   rdd2.foreach(f=>{
     println(f)
   })
@@ -177,7 +177,7 @@ Read files from multiple directories into single RDD
 It also supports reading files and multiple directories combination.
 
 ```
-  val rdd2 = spark.sparkContext.textFile("C:/tmp/dir1/*,C:/tmp/dir2/*,c:/tmp/files/text01.txt")
+  val rdd2 = spark.sparkContext.textFile("/headless/tmp/dir1/*,/headless/tmp/dir2/*,/headless/tmp/files/text01.txt")
   rdd2.foreach(f=>{
     println(f)
   })
@@ -221,7 +221,7 @@ use textFile() method to read csv file like any other text file into RDD
 and split the record based on comma, pipe or any other delimiter.
 
 ```
- val rdd5 = spark.sparkContext.textFile("C:/tmp/files/*")
+ val rdd5 = spark.sparkContext.textFile("/headless/tmp/files/*")
   val rdd6 = rdd5.map(f=>{
     f.split(",")
   })
@@ -269,36 +269,36 @@ object ReadMultipleFiles extends App {
   spark.sparkContext.setLogLevel("ERROR")
 
   println("read all text files from a directory to single RDD")
-  val rdd = spark.sparkContext.textFile("C:/tmp/files/*")
+  val rdd = spark.sparkContext.textFile("/headless/tmp/files/*")
   rdd.foreach(f=>{
     println(f)
   })
 
   println("read text files base on wildcard character")
-  val rdd2 = spark.sparkContext.textFile("C:/tmp/files/text*.txt")
+  val rdd2 = spark.sparkContext.textFile("/headless/tmp/files/text*.txt")
   rdd2.foreach(f=>{
     println(f)
   })
 
   println("read multiple text files into a RDD")
-  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/text01.txt,C:/tmp/files/text02.txt")
+  val rdd3 = spark.sparkContext.textFile("/headless/tmp/files/text01.txt,/headless/tmp/files/text02.txt")
   rdd3.foreach(f=>{
     println(f)
   })
 
   println("Read files and directory together")
-  val rdd4 = spark.sparkContext.textFile("C:/tmp/files/text01.txt,C:/tmp/files/text02.txt,C:/tmp/files/*")
+  val rdd4 = spark.sparkContext.textFile("/headless/tmp/files/text01.txt,/headless/tmp/files/text02.txt,/headless/tmp/files/*")
   rdd4.foreach(f=>{
     println(f)
   })
 
 
-  val rddWhole = spark.sparkContext.wholeTextFiles("C:/tmp/files/*")
+  val rddWhole = spark.sparkContext.wholeTextFiles("/headless/tmp/files/*")
   rddWhole.foreach(f=>{
     println(f._1+"=>"+f._2)
   })
 
-  val rdd5 = spark.sparkContext.textFile("C:/tmp/files/*")
+  val rdd5 = spark.sparkContext.textFile("/headless/tmp/files/*")
   val rdd6 = rdd5.map(f=>{
     f.split(",")
   })

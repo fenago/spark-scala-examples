@@ -166,16 +166,16 @@ object RDDRepartitionExample extends App {
 
   println("TextFile : "+rddFromFile.partitions.size)
 
-  rdd1.saveAsTextFile("c:/tmp/partition")
+  rdd1.saveAsTextFile("/headless/tmp/partition")
   val rdd2 = rdd1.repartition(4)
   println("Repartition size : "+rdd2.partitions.size)
 
-  rdd2.saveAsTextFile("c:/tmp/re-partition")
+  rdd2.saveAsTextFile("/headless/tmp/re-partition")
 
   val rdd3 = rdd1.coalesce(4)
   println("Repartition size : "+rdd3.partitions.size)
 
-  rdd3.saveAsTextFile("c:/tmp/coalesce")
+  rdd3.saveAsTextFile("/headless/tmp/coalesce")
 }
 ```
 
@@ -290,7 +290,7 @@ default**. Spark default defines shuffling partition to 200 using
 
 #### Conclusion
 
-In this Spark repartition and coalesce article, you have learned how to
+In this Spark repartition and coalesce lab, you have learned how to
 create an RDD with partition, repartition the RDD & DataFrame using
 repartition() and coalesce() methods, and learned the difference between
 repartition and coalesce.

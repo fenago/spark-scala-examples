@@ -6,7 +6,7 @@ Spark -- How to create an empty RDD?
 
 We often need to create empty RDD in Spark, and empty RDD can be created
 in several ways, for example, with partition, without partition, and
-with pair RDD. In this article, we will see these with Scala, Java and
+with pair RDD. In this lab, we will see these with Scala, Java and
 Pyspark examples.
 
 
@@ -181,7 +181,7 @@ object CreateEmptyRDD extends App{
 
 
 
-In this article, you have learned how to create an empty RDD in Spark
+In this lab, you have learned how to create an empty RDD in Spark
 with partition, no partition and finally with pair RDD. Hope it helps
 you.
 

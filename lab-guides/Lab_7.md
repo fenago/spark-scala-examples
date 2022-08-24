@@ -135,6 +135,6 @@ RDD.\
 
 #### Conclusion:
 
-In this article, you have learned creating Spark RDD from list or seq,
+In this lab, you have learned creating Spark RDD from list or seq,
 text file, from another RDD, DataFrame, and Dataset.
 

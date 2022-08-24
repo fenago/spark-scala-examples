@@ -16,7 +16,7 @@ all transformations are lazy meaning they do not get executed right away
 and action functions trigger to execute the transformations.
 
 
-Complete code I've used in this article is available at [GitHub project
+Complete code I've used in this lab is available at [GitHub project
 for quick
 reference](https://github.com/fenago/spark-scala-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/rdd/RDDActions.scala).
 

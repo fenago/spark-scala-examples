@@ -175,7 +175,7 @@ can read accumulators value using the `value()` method.
 
 ### Conclusion
 
-In this Spark accumulators shared variable article, you have learned the
+In this Spark accumulators shared variable lab, you have learned the
 Accumulators are only "added" through an associative and commutative and
 operation and are used to perform counters (Similar to Map-reduce
 counters) or sum operations and also learned different Accumulator

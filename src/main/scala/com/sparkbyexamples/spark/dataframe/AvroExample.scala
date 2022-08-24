@@ -77,7 +77,7 @@ object AvroExample {
     /**
       * Avro Spark SQL
       */
-    spark.sqlContext.sql("CREATE TEMPORARY VIEW PERSON USING avro OPTIONS (path \"C:/tmp/spark_out/avro/person.avro\")")
+    spark.sqlContext.sql("CREATE TEMPORARY VIEW PERSON USING avro OPTIONS (path \"/headless/tmp/spark_out/avro/person.avro\")")
     spark.sqlContext.sql("SELECT * FROM PERSON").show()
   }
 }

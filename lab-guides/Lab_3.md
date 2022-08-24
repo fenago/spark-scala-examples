@@ -9,7 +9,7 @@ SparkContext is available since Spark 1.x (JavaSparkContext for Java)
 and it used to be an entry point to Spark and PySpark before introducing
 [SparkSession]
 in 2.0. Creating SparkContext is the first step to use RDD and connect
-to Spark Cluster, In this article, you will learn how to create it using
+to Spark Cluster, In this lab, you will learn how to create it using
 examples.
 
 
@@ -101,7 +101,7 @@ object SparkSessionTest extends App {
 
 As I explained in the
 [SparkSession]
-article, you can create any number of SparkSession objects however, for
+lab, you can create any number of SparkSession objects however, for
 all those objects underlying there will be only one SparkContext.
 
 3. Create RDD
@@ -258,7 +258,7 @@ object SparkContextOld extends App{
 8. Conclusion
 -------------
 
-In this Spark Context article, you have learned what is SparkContext,
+In this Spark Context lab, you have learned what is SparkContext,
 how to create in Spark 1.x and Spark 2.0, and using with few basic
 examples.
 

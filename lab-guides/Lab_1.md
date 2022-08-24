@@ -7,7 +7,7 @@ How to Run Spark Examples from IntelliJ
 
 Here, I will explain how to run Apache Spark Application examples
 explained in this **blog** on windows using Scala & Maven from IntelliJ
-IDEA. Since the articles mentioned in this tutorial uses Apache Maven as
+IDEA. Since the labs mentioned in this tutorial uses Apache Maven as
 the build system, we will use [Maven](https://maven.apache.org/) to
 build the project.
 

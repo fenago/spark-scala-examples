@@ -51,7 +51,7 @@ object WriteXML {
       data
     })
 
-    ds.write.text("c:/tmp/xstream.xml")
+    ds.write.text("/headless/tmp/xstream.xml")
 
 //    val df2 = spark.createDataFrame(spark.sparkContext.parallelize(data),schema).as[Person]
 //
@@ -63,6 +63,6 @@ object WriteXML {
 //      })
 //      person
 //    })
-//    ds2.write.text("c:/tmp/xstream_2.xml")
+//    ds2.write.text("/headless/tmp/xstream_2.xml")
   }
 }

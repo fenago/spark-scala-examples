@@ -59,7 +59,7 @@ object DataFrameFromCSVFile {
 
     //Write a csv file
     df_with_schema.write.mode(SaveMode.Overwrite)
-      .csv("c:/tmp/spark_output/zipcodes")
+      .csv("/headless/tmp/spark_output/zipcodes")
 
   }
 }

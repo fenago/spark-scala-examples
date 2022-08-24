@@ -18,7 +18,7 @@ By default JSON data source inferschema from an input file.
 
 
 
-Refer dataset used in this article at [zipcodes.json on
+Refer dataset used in this lab at [zipcodes.json on
 GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/main/resources/zipcodes.json)
 
 ```

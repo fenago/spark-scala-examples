@@ -14,6 +14,6 @@ object SaveDataFrame {
 
     var df:DataFrame = spark.read.option("header","true").csv(filePath)
 
-    df.repartition(5).write.option("header","true").csv("c:/tmp/output/df1")
+    df.repartition(5).write.option("header","true").csv("/headless/tmp/output/df1")
   }
 }

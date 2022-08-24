@@ -12,7 +12,7 @@ content and metadata of the file. 
 
 
 
-In this Spark 3.0 article, I will provide a Scala example of how to read
+In this Spark 3.0 lab, I will provide a Scala example of how to read
 single, multiple, and all binary files from a folder into DataFrame and
 also know different options it supports.
 
@@ -55,7 +55,7 @@ root
 +--------------------+--------------------+------+--------------------+
 |                path|    modificationTime|length|             content|
 +--------------------+--------------------+------+--------------------+
-|file:/C:/tmp/bina...|2020-07-25 10:11:...| 74675|[89 50 4E 47 0D 0...|
+|file://headless/tmp/bina...|2020-07-25 10:11:...| 74675|[89 50 4E 47 0D 0...|
 +--------------------+--------------------+------+--------------------+
 ```
 
@@ -147,7 +147,7 @@ Few things to note
 
 -   binary() method on `DataFrameReader` still not available hence, you
     can't use `spark.read.binary("path")` yet. I will update this
-    article when it's available.
+    lab when it's available.
 
 -   Currently, the binary file data source does not support writing a
     DataFrame back to the binary file format.

@@ -38,7 +38,7 @@ object ParquetAWSExample {
     df.write
     .csv("s3a://sparkbyexamples/people1234.csv")
 
-    //df.write.csv("C:/tmp/123.csv")
+    //df.write.csv("/headless/tmp/123.csv")
 
     //    val parqDF = spark.read.parquet("C:\\tmp\\output\\people.parquet")
     //    parqDF.createOrReplaceTempView("ParquetTable")

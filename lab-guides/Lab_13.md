@@ -182,7 +182,7 @@ issues on Spark jobs.
 
 ### Conclusion
 
-In this article, you have learned what is Spark SQL shuffle, how some
+In this lab, you have learned what is Spark SQL shuffle, how some
 Spark operation triggers re-partition of the data, how to change the
 default spark shuffle partition, and finally how to get the right
 partition size.

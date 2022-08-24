@@ -8,7 +8,7 @@ Spark Read XML file using Databricks API
 Apache Spark can also be used to process or read simple to complex
 nested XML files into Spark DataFrame and writing it back to XML using
 Databricks [Spark XML API](https://github.com/databricks/spark-xml)
-(spark-xml) library. In this article, I will explain how to read XML
+(spark-xml) library. In this lab, I will explain how to read XML
 file with several options using the Scala example.
 
 
@@ -152,7 +152,7 @@ This snippet writes a Spark DataFrame "df2" to XML file
 ### Limitations:
 
 This API is most useful when reading and writing simple XML files.
-However, At the time of writing this article, this API has the following
+However, At the time of writing this lab, this API has the following
 limitations.
 
 -   Reading/Writing attribute to/from root element not supported in this
@@ -162,7 +162,7 @@ limitations.
 
 If you have one root element following data elements then Spark XML is
 GO to API. If you wanted to write a complex structure and this API is
-not suitable for you, please read below article where I've explained
+not suitable for you, please read below lab where I've explained
 using XStream API
 
 [Spark -- Writing complex XML structures using XStream
@@ -239,7 +239,7 @@ df2.write
 
 #### Conclusion:
 
-In this article, you have learned how to read XML files into Apache
+In this lab, you have learned how to read XML files into Apache
 Spark DataFrame and write it back to XML, Avro, and Parquet files after
 processing using spark xml API. Also, explains some limitations of using
 Databricks Spark-XML API.

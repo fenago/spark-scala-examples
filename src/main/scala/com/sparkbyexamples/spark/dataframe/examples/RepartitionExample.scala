@@ -16,7 +16,7 @@ object RepartitionExample extends App {
  df.printSchema()
   println(df.rdd.partitions.length)
 
-  df.write.mode(SaveMode.Overwrite)csv("c:/tmp/df-partition.csv")
+  df.write.mode(SaveMode.Overwrite)csv("/headless/tmp/df-partition.csv")
 
   val df2 = df.repartition(10)
 

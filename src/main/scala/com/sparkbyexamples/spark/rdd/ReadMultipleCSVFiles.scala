@@ -13,7 +13,7 @@ object ReadMultipleCSVFiles extends App {
   spark.sparkContext.setLogLevel("ERROR")
 
   println("spark read csv files from a directory into RDD")
-  val rddFromFile = spark.sparkContext.textFile("C:/tmp/files/text01.csv")
+  val rddFromFile = spark.sparkContext.textFile("/headless/tmp/files/text01.csv")
   println(rddFromFile.getClass)
 
   val rdd = rddFromFile.map(f=>{
@@ -32,19 +32,19 @@ object ReadMultipleCSVFiles extends App {
   })
 
   println("read all csv files from a directory to single RDD")
-  val rdd2 = spark.sparkContext.textFile("C:/tmp/files/*")
+  val rdd2 = spark.sparkContext.textFile("/headless/tmp/files/*")
   rdd2.foreach(f=>{
     println(f)
   })
 
   println("read csv files base on wildcard character")
-  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/text*.csv")
+  val rdd3 = spark.sparkContext.textFile("/headless/tmp/files/text*.csv")
   rdd3.foreach(f=>{
     println(f)
   })
 
   println("read multiple csv files into a RDD")
-  val rdd4 = spark.sparkContext.textFile("C:/tmp/files/text01.csv,C:/tmp/files/text02.csv")
+  val rdd4 = spark.sparkContext.textFile("/headless/tmp/files/text01.csv,/headless/tmp/files/text02.csv")
   rdd4.foreach(f=>{
     println(f)
   })

@@ -25,7 +25,7 @@ object PartitionBy {
 
     val rdd4 = rdd3.partitionBy(new HashPartitioner(3))
 
-    rdd4.saveAsTextFile("c:/tmp/output/partition")
+    rdd4.saveAsTextFile("/headless/tmp/output/partition")
 
 
   }
