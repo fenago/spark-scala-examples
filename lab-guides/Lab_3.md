@@ -1,97 +1,84 @@
 
 
-Spark -- What is SparkSession Explained
-=======================================
+What is SparkContext? Explained
+===============================
 
 
 
-Since Spark 2.0, SparkSession has become an entry point to Spark to work
-with RDD, DataFrame, and Dataset. Prior to 2.0, SparkContext used to be
-an entry point. Here, I will mainly focus on explaining what is
-SparkSession by defining and describing how to create Spark Session and
-using the default Spark Session 'spark' variable from spark-shell.
+SparkContext is available since Spark 1.x (JavaSparkContext for Java)
+and it used to be an entry point to Spark and PySpark before introducing
+[SparkSession]
+in 2.0. Creating SparkContext is the first step to use RDD and connect
+to Spark Cluster, In this article, you will learn how to create it using
+examples.
 
 
 
 
 
-**What is SparkSession**
+**What is SparkContext**
 
-SparkSession was introduced in version Spark 2.0, It is an entry point
-to underlying Spark functionality in order to programmatically create
-Spark RDD, DataFrame, and DataSet. SparkSession's object *`spark`* is
-the default variable available in `spark-shell` and it can be created
-programmatically using `SparkSession` builder pattern.
-
-
-
-1. SparkSession in Spark 2.0
---------------------------------------------------------------------------------------------------
-
--   With Spark 2.0 a new class `org.apache.spark.sql.SparkSession` has
-    been introduced which is a combined class for all different contexts
-    we used to have prior to 2.0 (`SQLContext` and `HiveContext` e.t.c)
-    release hence, Spark Session can be used in the place of SQLContext,
-    HiveContext, and other contexts.
-
--   As mentioned in the beginning SparkSession is an entry point to
-    Spark and creating a SparkSession instance would be the first
-    statement you would write to program with
-    [RDD],
-    [DataFrame],
-    and Dataset. SparkSession will be created using
-    `SparkSession.builder()` builder patterns.
-
--   Prior to Spark 2.0, SparkContext used to be an entry point, and it's
-    not been completely replaced with SparkSession, many features of
-    SparkContext are still available and used in Spark 2.0 and later.
-    You should also know that SparkSession internally creates
-    `SparkConfig` and `SparkContext` with the configuration provided
-    with SparkSession.
-
--   Spark Session also includes all the APIs available in different
-    contexts --
-    -   SparkContext
-    -   SQLContext
-    -   StreamingContext
-    -   HiveContext
-
-**How many SparkSessions can you create in an application?**
+Since Spark 1.x, SparkContext is an entry point to Spark and is defined
+in `org.apache.spark` package. It is used to programmatically [create
+Spark
+RDD](),
+[accumulators],
+and [broadcast
+variables]
+on the cluster. Its object *`sc`* is default variable available in
+spark-shell and it can be programmatically created using `SparkContext`
+class.
 
 
 
-You can create as many `SparkSession` as you want in a Spark application
-using
-either `SparkSession.builder()` or `SparkSession.newSession()`. Many
-Spark session objects are required when you wanted to keep Spark tables
-(relational entities) logically separated.
+***Note that you can create only one active SparkContext per JVM.***
+***You should stop() the active SparkContext before creating a new
+one.***
 
-2. SparkSession in spark-shell
+
+
+
+![Source: spark.apache.org](./Lab_4_files/image04.png)
+
+The Spark driver program creates and uses SparkContext to connect to the
+cluster manager to submit Spark jobs, and know what resource manager
+(YARN, Mesos or Standalone) to communicate to. It is the heart of the
+Spark application.
+
+**Related:** [How to get current SparkContext & its configurations in
+Spark]
+
+1. SparkContext in spark-shell
 -------------------------------------------------------------------------------------------------------
 
-Be default Spark shell provides `spark` object which is an instance of
-SparkSession class. We can directly use this object when required in
-[spark-shell].
+Be default Spark shell provides `sc` object which is an instance of
+SparkContext class. We can directly use this object where required.
+
+
 
 ```
-// Usage of spark variable
-scala> spark.version
+scala>>sc.appName
 ```
 
 
 
 Similar to the Spark shell, In most of the tools, notebooks, and Azure
-Databricks, the environment itself creates a default SparkSession object
-for us to use so you don't have to worry about creating a spark session.
+Databricks, the environment itself creates a default SparkContext object
+for us to use so you don't have to worry about creating a spark context.
 
+2. Spark 2.X -- Create SparkContext using Scala Program
+-------------------------------------------------------------------------------------------------------------------------------------------------------
 
+Since Spark 2.0, we mostly use
+[SparkSession]
+as most of the methods available in SparkContext are also present in
+[SparkSession].
+Spark session internally creates the Spark Context and exposes the
+`sparkContext` variable to use.
 
-### 3. Create SparkSession From Scala Program
-
-To create SparkSession in Scala or Python, you need to use the builder
-pattern method `builder()` and calling `getOrCreate()` method. If
-SparkSession already exists it returns otherwise creates a new
-SparkSession.
+At any given time only one `SparkContext` instance should be active per
+JVM. In case you want to create another you should stop existing
+SparkContext (using `stop()`) before creating a new one.
 
 ```
 // Create SparkSession object
@@ -101,318 +88,177 @@ object SparkSessionTest extends App {
       .master("local[1]")
       .appName("sparkexamples")
       .getOrCreate();
-  println(spark)
-  println("Spark Version : "+spark.version)
+  println(spark.sparkContext)
+  println("Spark App Name : "+spark.sparkContext.appname)
 }
 
 // Outputs
-//org.apache.spark.sql.SparkSession@2fdf17dc
-//Spark Version : 3.2.1
+//org.apache.spark.SparkContext@2fdf17dc
+//Spark App Name : sparkexamples
 ```
 
 
 
-From the above code --
+As I explained in the
+[SparkSession]
+article, you can create any number of SparkSession objects however, for
+all those objects underlying there will be only one SparkContext.
 
-`SparkSession.builder()` -- Return `SparkSession.Builder` class. This is
-a builder for `SparkSession`. master(), appName() and getOrCreate() are
-methods of
-[SparkSession.Builder](https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/SparkSession.Builder.html).
+3. Create RDD
+---------------------------------------------------------------------
 
-
-
-
-
-
-`master()` -- If you are running it on the cluster you need to use your
-master name as an argument to master(). usually, it would be
-either [`yarn` ]or `mesos` depends
-on your cluster setup.
-
--   Use `local[x]` when running in Standalone mode. x should be an
-    integer value and should be greater than 0; this represents how many
-    partitions it should create when using RDD, DataFrame, and Dataset.
-    Ideally, x value should be the number of CPU cores you have.
--   For standalone use `spark://master:7077`
-
-`appName()` -- Sets a name to the Spark application that shows in the
-[Spark web
-UI]. If
-no application name is set, it sets a random name.
-
-`getOrCreate()` -- This returns a SparkSession object if already exists.
-Creates a new one if not exist.
-
-### 3.1 Get Existing SparkSession
-
-You can get the existing SparkSession in Scala programmatically using
-the below example.
+Once you create a Spark Context object, use below to create Spark RDD.
 
 ```
-// Get existing SparkSession 
-import org.apache.spark.sql.SparkSession
-val spark2 = SparkSession.builder().getOrCreate()
-print(spark2)
+// Create RDD
+val rdd = spark.sparkContext.range(1, 5)
+rdd.collect().foreach(print)
 
-// Outputs
-// org.apache.spark.sql.SparkSession@2fdf17dc
+// Create RDD from Text file
+val rdd2 = spark.sparkContext.textFile("/src/main/resources/text/alice.txt")
 ```
 
 
 
-Compare the hash of spark and spark2 object. Since it returned the
-existing session, both objects have the same hash value.
+4. Stop SparkContext
+-----------------------------------------------------------------------------------
 
-### 3.2 Create Another SparkSession
-
-Sometimes you might be required to create multiple sessions, which you
-can easily achieve by using `newSession()` method. This uses the same
-app name, master as the existing session. Underlying SparkContext will
-be the same for both sessions as you can have only one context per Spark
-application.
+You can stop the SparkContext by calling the `stop()` method. As
+explained above you can have only one SparkContext per JVM. If you
+wanted to create another, you need to shutdown it first by using stop()
+method and create a new SparkContext.
 
 ```
-// Create a new SparkSession
-val spark3 = spark.newSession()
-print(spark3)
-
-// Outputs
-// org.apache.spark.sql.SparkSession@692dba54
+//SparkContext stop() method
+spark.sparkContext.stop()
 ```
 
 
 
-Compare this hash with the hash from the above example, it should be
-different.
+When Spark executes this statement, it logs the message ***INFO
+SparkContext: Successfully stopped SparkContext*** to console or to a
+log file.
 
-### 3.3 Setting Spark Configs
+5. Spark 1.X -- Creating SparkContext using Scala Program
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-If you wanted to set some configs to SparkSession, use the `config()`
-method.
-
-```
-// Usage of config()
-val spark = SparkSession.builder()
-      .master("local[1]")
-      .appName("sparkexamples")
-      .config("spark.some.config.option", "config-value")
-      .getOrCreate();
-```
-
-
-
-### 3.4 Create SparkSession with Hive Enable
-
-In order to use Hive with Spark, you need to enable it using the
-`enableHiveSupport()` method.
+In Spark 1.x, first, you need to create a `SparkConf` instance by
+assigning app name and setting master by using the SparkConf static
+methods `setAppName()` and `setMaster()` respectively and then pass
+SparkConf object as an argument to SparkContext constructor to create
+Spark Context.
 
 ```
-// Enabling Hive to use in Spark
-val spark = SparkSession.builder()
-      .master("local[1]")
-      .appName("sparkexamples")
-      .config("spark.sql.warehouse.dir", "<path>/spark-warehouse")
-      .enableHiveSupport()
-      .getOrCreate();
+// Create SpakContext
+import org.apache.spark.{SparkConf, SparkContext}
+val sparkConf = new SparkConf().setAppName("sparkexamples").setMaster("local[1]")
+val sparkContext = new SparkContext(sparkConf)
 ```
 
 
 
-4. Other Usages of SparkSession
----------------------------------------------------------------------------------------------------------
-
-### 4.1 Set & Get All Spark Configs
-
-Once the SparkSession is created, you can add the spark configs during
-runtime or get all configs.
+SparkContext constructor has been deprecated in 2.0 hence, the
+recommendation is to use a static method `getOrCreate()` that internally
+creates SparkContext. This function instantiates a SparkContext and
+registers it as a singleton object.
 
 ```
-// Set Config
-spark.conf.set("spark.sql.shuffle.partitions", "30")
-
-// Get all Spark Configs
-val configMap:Map[String, String] = spark.conf.getAll
+// Create Spark Context
+val sc = SparkContext.getOrCreate(sparkConf)
 ```
 
 
 
-### 4.2 Create DataFrame
-
-SparkSession also provides several methods to [create a Spark
-DataFrame]
-and DataSet. The below example uses the `createDataFrame()` method which
-takes a list of data.
-
-```
-// Create DataFrame
-val df = spark.createDataFrame(
-    List(("Scala", 25000), ("Spark", 35000), ("PHP", 21000)))
-df.show()
-
-// Output
-//+-----+-----+
-//|   _1|   _2|
-//+-----+-----+
-//|Scala|25000|
-//|Spark|35000|
-//|  PHP|21000|
-//+-----+-----+
-```
-
-
-
-### 4.3 Working with Spark SQL
-
-Using SparkSession you can access Spark SQL capabilities in Apache
-Spark. In order to use SQL features first, you need to create a
-temporary view in Spark. Once you have a temporary view you can run any
-ANSI SQL queries using `spark.sql()` method.
-
-```
-// Spark SQL
-df.createOrReplaceTempView("sample_table")
-val df2 = spark.sql("SELECT _1,_2 FROM sample_table")
-df2.show()
-```
-
-
-
-Spark SQL temporary views are session-scoped and will not be available
-if the session that creates it terminates. If you want to have a
-temporary view that is shared among all sessions and keep alive until
-the Spark application terminates, you can create a global temporary view
-using `createGlobalTempView()`
-
-### 4.4 Create Hive Table
-
-As explained above SparkSession is used to create and query Hive tables.
-Note that in order to do this for testing you don't need Hive to be
-installed. `saveAsTable()` creates Hive managed table. Query the table
-using `spark.sql()`.
-
-```
-// Create Hive table & query it.  
-spark.table("sample_table").write.saveAsTable("sample_hive_table")
-val df3 = spark.sql("SELECT _1,_2 FROM sample_hive_table")
-df3.show()
-```
-
-
-
-### 4.5 Working with Catalogs
-
-To get the catalog metadata, Spark Session exposes `catalog` variable.
-Note that these methods `spark.catalog.listDatabases` and
-`spark.catalog.listTables` and returns the DataSet.
-
-```
-// Get metadata from the Catalog
-// List databases
-val ds = spark.catalog.listDatabases
-ds.show(false)
-
-// Output
-//+-------+----------------+----------------------------+
-//|name   |description     |locationUri                 |
-//+-------+----------------+----------------------------+
-//|default|default database|file:/<path>/spark-warehouse|
-//+-------+----------------+----------------------------+
-
-// List Tables
-val ds2 = spark.catalog.listTables
-ds2.show(false)
-
-//Output
-//+-----------------+--------+-----------+---------+-----------+
-//|name             |database|description|tableType|isTemporary|
-//+-----------------+--------+-----------+---------+-----------+
-//|sample_hive_table|default |null       |MANAGED  |false      |
-//|sample_table     |null    |null       |TEMPORARY|true       |
-//+-----------------+--------+-----------+---------+-----------+
-```
-
-
-
-Notice the two tables we have created, Spark table is considered a
-temporary table and [Hive table as managed
-table].
-
-5. SparkSession Commonly Used Methods
+6. SparkContext Commonly Used Methods
 ---------------------------------------------------------------------------------------------------------------------
 
-`version` -- Returns [Spark
-version] where
-your application is running, probably the Spark version your cluster is
-configured with.
+`longAccumulator()` -- It creates an accumulator variable of a long data
+type. Only a driver can access accumulator variables.
 
-`catalog` -- Returns the catalog object to access metadata.
+`doubleAccumulator()` -- It creates an accumulator variable of a double
+data type. Only a driver can access accumulator variables.
 
-`conf` -- Returns the RuntimeConfig object.
+`applicationId` -- Returns a unique ID of a Spark application.
 
-`builder()` -- builder() is used to create a new SparkSession, this
-return `SparkSession.Builder`
+`appName` -- Return an app name that was given when creating
+SparkContext
 
-`newSession()` -- Creaetes a new SparkSession.
+`broadcast` -- read-only variable broadcast to the entire cluster. You
+can broadcast a variable to a Spark cluster only once.
 
-`range(n)` -- Returns a single
-column [`Dataset`](https://spark.apache.org/docs/latest/api/java/org/apache/spark/sql/Dataset.html) with
-`LongType` and column named `id`, containing elements in a range from 0
-to `n` (exclusive) with step value 1. There are several variations of
-this function, refer to Spark documentation.
+`emptyRDD` -- Creates an [empty
+RDD]
 
-`createDataFrame()` -- This [creates a
-DataFrame]
-from a collection and an
-[RDD]
+`getPersistentRDDs` -- Returns all persisted RDDs
 
-`createDataset()` -- This [creates a
-Dataset]
-from the collection, DataFrame, and RDD.
+`getOrCreate()` -- Creates or returns a SparkContext
 
-`emptyDataFrame()` -- Creates an [empty
-DataFrame].
+`hadoopFile` -- Returns an
+[RDD] of a Hadoop file
 
-`emptyDataset()` -- Creates an [empty
-Dataset].
+`master()`--  Returns master that set while creating SparkContext
 
-`getActiveSession()` -- Returns an active Spark session for the current
-thread.
+`newAPIHadoopFile` -- Creates an
+[RDD] for a Hadoop file
+with a new API InputFormat.
 
-`getDefaultSession()` -- Returns the default SparkSession that is
-returned by the builder.
+`sequenceFile` -- Get an
+[RDD] for a Hadoop
+SequenceFile with given key and value types.
 
-`implicits()` -- To access the nested Scala object.
+`setLogLevel` -- Change log level to debug, info, warn, fatal, and error
 
-`read()` -- Returns an instance of `DataFrameReader` class, this is used
-to read records from CSV, Parquet, Avro, and more file formats into
-DataFrame.
+`textFile` -- [Reads a text
+file]
+from HDFS, local or any Hadoop supported file systems and returns an RDD
 
-`readStream()` -- Returns an instance of `DataStreamReader` class, this
-is used to read streaming data. that can be used to read streaming data
-into DataFrame.
+`union` -- Union two RDDs
 
-`sparkContext()` -- Returns a
-[SparkContext].
+`wholeTextFiles` -- [Reads a text file in the
+folder]
+from HDFS, local or any Hadoop supported file systems and returns an RDD
+of Tuple2. First element of the tuple consists file name and the second
+element consists context of the text file.
 
-`sql(String sql)` -- Returns a DataFrame after executing the SQL
-mentioned.
+7. SparkContext Example
+-----------------------------------------------------------------------------------------
 
-`sqlContext()` -- Returns
-[SQLContext].
+```
+package com.sparkbyexamples.spark.stackoverflow
 
-`stop()` -- Stop the current
-[SparkContext].
+import org.apache.spark.{SparkConf, SparkContext}
 
-`table()` -- Returns a DataFrame of a table or view.
+object SparkContextOld extends App{
 
-`udf()` -- Creates a [Spark UDF to use it on
-DataFrame], Dataset,
-and SQL.
+  val conf = new SparkConf().setAppName("sparkexamples").setMaster("local[1]")
+  val sparkContext = new SparkContext(conf)
+  val rdd = sparkContext.textFile("/src/main/resources/text/alice.txt")
 
-6. Conclusion
+  sparkContext.setLogLevel("ERROR")
+
+  println("First SparkContext:")
+  println("APP Name :"+sparkContext.appName);
+  println("Deploy Mode :"+sparkContext.deployMode);
+  println("Master :"+sparkContext.master);
+ // sparkContext.stop()
+  
+  val conf2 = new SparkConf().setAppName("sparkexamples-2").setMaster("local[1]")
+  val sparkContext2 = new SparkContext(conf2)
+
+  println("Second SparkContext:")
+  println("APP Name :"+sparkContext2.appName);
+  println("Deploy Mode :"+sparkContext2.deployMode);
+  println("Master :"+sparkContext2.master);
+  
+}
+```
+
+
+
+8. Conclusion
 -------------
 
-In this Spark SparkSession article, you have learned what is Spark
-Session, its usage, how to create SparkSession programmatically, and
-finally learned some of the commonly used SparkSession methods.
+In this Spark Context article, you have learned what is SparkContext,
+how to create in Spark 1.x and Spark 2.0, and using with few basic
+examples.
 

@@ -1,258 +1,232 @@
 
 
-Spark Read and Write Apache Parquet
-===================================
-
-
-Apache Parquet Introduction
---------------------------------------------------------------------------------------------------
-
-[Apache Parquet](https://parquet.apache.org/) is a columnar file format
-that provides optimizations to speed up queries and is a far more
-efficient file format than CSV or JSON, supported by many data
-processing systems.
-
-It is compatible with most of the data processing frameworks in
-the [Hadoop](https://en.wikipedia.org/wiki/Hadoop) echo systems. It
-provides efficient data compression and encoding schemes with enhanced
-performance to handle complex data in bulk.
+Read & Write Avro files using Spark DataFrame
+=============================================
 
 
 
-Spark SQL provides support for both reading and writing Parquet files
-that automatically capture the schema of the original data, It also
-reduces data storage by 75% on average. Below are some advantages of
-storing data in a parquet format. Spark by default supports Parquet in
-its library hence we don't need to add any dependency libraries.
+**Related:** [Spark from\_avro() and to\_avro()
+usage]
 
-Apache Parquet Advantages:
------------------------------------------------------------------------------------------------
+What is Apache Avro?
+-----------------------------------------------------------------------------------
 
-Below are some of the advantages of using Apache Parquet. combining
-these benefits with Spark improves performance and gives the ability to
-work with structure files.
+[Apache Avro](https://avro.apache.org/docs/current/) is an open-source,
+row-based, data serialization and data exchange framework for Hadoop
+projects, originally developed by databricks as an open-source library
+that supports reading and writing data in Avro file format. it is mostly
+used in Apache Spark especially for Kafka-based data pipelines. When
+Avro data is stored in a file, its schema is stored with it, so that
+files may be processed later by any program.
 
--   **Reduces IO operations.**
--   **Fetches specific columns that you need to access.**
--   **It consumes less space.**
--   **Support type-specific encoding.**
-
-Apache Parquet Spark Example
-----------------------------------------------------------------------------------------------------
-
-Before we go over the Apache parquet with the Spark example, first,
-let's [Create a Spark
-DataFrame]
-from `Seq` object. Note that
-[toDF()]
-function on sequence object is available only when you import implicits
-using `spark.sqlContext.implicits._`. This complete spark parquet
-example is available at
-[Github](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-sql-examples/src/main/scala/com/sparkbyexamples/spark/dataframe/ParquetExample.scala)
-repository for reference.
+It has build to serialize and exchange big data between different Hadoop
+based projects. It serializes data in a compact binary format and schema
+is in JSON format that defines the field names and data types.
 
 
 
-```
-val data = Seq(("James ","","Smith","36636","M",3000),
-              ("Michael ","Rose","","40288","M",4000),
-              ("Robert ","","Williams","42114","M",4000),
-              ("Maria ","Anne","Jones","39192","F",4000),
-              ("Jen","Mary","Brown","","F",-1))
+It is similar
+to [Thrift](https://en.wikipedia.org/wiki/Thrift_(protocol)) and [Protocol
+Buffers](https://en.wikipedia.org/wiki/Protocol_Buffers), but does not
+require the code generation as it's data always accompanied by a schema
+that permits full processing of that data without code generation. This
+is one of the great advantages compared with other serialization
+systems.
 
-val columns = Seq("firstname","middlename","lastname","dob","gender","salary")
+Apache Avro Advantages
+----------------------------------------------------------------------------------------
 
-import spark.sqlContext.implicits._
-val df = data.toDF(columns:_*)
-```
+-   Supports complex data structures like Arrays, Map, Array of map and
+    map of array elements.
+-   A compact, binary serialization format which provides fast while
+    transferring data.
+-   row-based data serialization system.
+-   Support multi-languages, meaning data written by one language can be
+    read by different languages.
+-   Code generation is not required to read or write data files.
+-   Simple integration with dynamic languages.
 
+Spark Avro dependencies
+------------------------------------------------------------------------------------------
 
+Since Spark 2.4, [Spark
+SQL](https://spark.apache.org/docs/latest/sql-programming-guide.html) provides
+built-in support for reading and writing Apache Avro data files,
+however, the `spark-avro` module is external and by default, it's not
+included in `spark-submit` or `spark-shell` hence, accessing Avro file
+format in Spark is enabled by providing a package.
 
-The above example creates a data frame with columns "firstname",
-"middlename", "lastname", "dob", "gender", "salary"
-
-### Spark Write DataFrame to Parquet file format
-
-Using `parquet()` function of `DataFrameWriter` class, we can write
-Spark DataFrame to the Parquet file. As mentioned earlier Spark doesn't
-need any additional packages or libraries to use Parquet as it by
-default provides with Spark. easy isn't it? so we don't have to worry
-about version and compatibility issues. In this example, we are writing
-DataFrame to "people.parquet" file.
+#### maven dependencies.
 
 ```
-df.write.parquet("/tmp/output/people.parquet")
+<dependency>
+    <groupId>org.apache.spark</groupId>
+    <artifactId>spark-avro_2.11</artifactId>
+    <version>2.4.0</version>
+</dependency>
+```
+
+#### spark-submit
+
+While using `spark-submit`, provide `spark-avro_2.12` and its
+dependencies directly using `--packages`, such as,
+
+```
+./bin/spark-submit --packages org.apache.spark:spark-avro_2.12:2.4.4
 ```
 
 
 
-Writing Spark DataFrame to Parquet format preserves the column names and
-data types, and all columns are automatically converted to be nullable
-for compatibility reasons. Notice that all part files Spark creates has
-parquet extension.
+#### spark-shell
 
-
-
-
-
-
-![](./images/parquet1.jpg)
-
-### Spark Read Parquet file into DataFrame
-
-Similar to write, DataFrameReader provides parquet() function
-(spark.read.parquet) to read the parquet files and creates a Spark
-DataFrame. In this example snippet, we are reading data from an apache
-parquet file we have written before.
+While working with  `spark-shell`, you can also use `--packages` to
+add `spark-avro_2.12` and its dependencies directly,
 
 ```
-val parqDF = spark.read.parquet("/tmp/output/people.parquet")
+./bin/spark-shell --packages org.apache.spark:spark-avro_2.12:2.4.4
 ```
 
 
 
-printing schema of DataFrame returns columns with the same names and
-data types.
-
-### Append to existing Parquet file
-
-Spark provides the capability to append DataFrame to existing parquet
-files using "append" save mode. In case, if you want to overwrite use
-"overwrite" save mode.
-
-```
-df.write.mode('append').parquet("/tmp/output/people.parquet")
-```
-
-
-
-### Using SQL queries on Parquet
-
-We can also create a temporary view on Parquet files and then use it in
-Spark SQL statements. This temporary table would be available until the
-SparkContext present.
-
-```
-parqDF.createOrReplaceTempView("ParquetTable")
-val parkSQL = spark.sql("select * from ParquetTable where salary >= 4000 ")
-```
-
-
-
-Above predicate on spark parquet file does the file scan which is
-performance bottleneck like table scan on a traditional database. We
-should use partitioning in order to improve performance.
-
-Spark parquet partition -- Improving performance
--------------------------------------------------------------------------------------------------------------------------------------------
-
-Partitioning is a feature of many databases and data processing
-frameworks and it is key to make jobs work at scale. We can do a parquet
-file partition using spark `partitionBy()` function.
-
-```
-df.write.partitionBy("gender","salary")
-        .parquet("/tmp/output/people2.parquet")
-```
-
-
-
-Parquet Partition creates a folder hierarchy for each spark partition;
-we have mentioned the first partition as gender followed by salary
-hence, it creates a salary folder inside the gender folder.
-
-![](./images/parquet2.jpg)
-
-This is an example of how to write a Spark DataFrame by preserving the
-partitioning on gender and salary columns.
-
-```
-val parqDF = spark.read.parquet("/tmp/output/people2.parquet")
-parqDF.createOrReplaceTempView("Table2")
-val df = spark.sql("select * from Table2  where gender='M' and salary >= 4000")
-```
-
-
-
-The execution of this query is [significantly faster than the query
-without
-partition].
-It filters the data first on gender and then applies filters on salary.
-
-Spark Read a specific Parquet partition
+Write Spark DataFrame to Avro Data File
 --------------------------------------------------------------------------------------------------------------------------
 
-```
-val parqDF = spark.read.parquet("/tmp/output/people2.parquet/gender=M")
-```
-
-
-
-This code snippet retrieves the data from the gender partition value
-"M".
-
-The complete code can be downloaded
-from [GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-sql-examples/src/main/scala/com/sparkbyexamples/spark/dataframe/ParquetExample.scala)
-
-Complete Spark Parquet Example
---------------------------------------------------------------------------------------------------------
+Since Avro library is external to Spark, it doesn't provide `avro()`
+function on `DataFrameWriter` , hence we should use DataSource "`avro`"
+or "`org.apache.spark.sql.avro`" to write Spark DataFrame to Avro file.
 
 ```
-package com.sparkbyexamples.spark.dataframe
+df.write.format("avro").save("person.avro")
+```
 
-import org.apache.spark.sql.SparkSession
 
-object ParquetExample {
 
-  def main(args:Array[String]):Unit= {
+Read Avro Data File to Spark DataFrame
+------------------------------------------------------------------------------------------------------------------------
 
-    val spark: SparkSession = SparkSession.builder()
-      .master("local[1]")
-      .appName("sparkexamples")
-      .getOrCreate()
+Similarly `avro()` function is not provided in Spark `DataFrameReader` 
+hence, we should use DataSource format as "avro" or
+"org.apache.spark.sql.avro" and `load()` is used to read the Avro file.
 
-    val data = Seq(("James ","","Smith","36636","M",3000),
-                 ("Michael ","Rose","","40288","M",4000),
-                 ("Robert ","","Williams","42114","M",4000),
-                 ("Maria ","Anne","Jones","39192","F",4000),
-                 ("Jen","Mary","Brown","","F",-1))
+```
+val personDF= spark.read.format("avro").load("person.avro")
+```
 
-    val columns = Seq("firstname","middlename","lastname","dob","gender","salary")
-    import spark.sqlContext.implicits._
-    val df = data.toDF(columns:_*)
-    df.show()
-    df.printSchema()
-    df.write
-      .parquet("/tmp/output/people.parquet")
-    val parqDF = spark.read.parquet("/tmp/output/people.parquet")
-    parqDF.createOrReplaceTempView("ParquetTable")
-    spark.sql("select * from ParquetTable where salary >= 4000").explain()
-    val parkSQL = spark.sql("select * from ParquetTable where salary >= 4000 ")
-    parkSQL.show()
-    parkSQL.printSchema()
-    df.write
-      .partitionBy("gender","salary")
-      .parquet("/tmp/output/people2.parquet")
-    val parqDF2 = spark.read.parquet("/tmp/output/people2.parquet")
-    parqDF2.createOrReplaceTempView("ParquetTable2")
-    val df3 = spark.sql("select * from ParquetTable2  where gender='M' and salary >= 4000")
-    df3.explain()
-    df3.printSchema()
-    df3.show()
-    val parqDF3 = spark.read
-      .parquet("/tmp/output/people2.parquet/gender=M")
-    parqDF3.show()
-  }
+
+
+Writing Avro Partition Data
+--------------------------------------------------------------------------------------------------
+
+Spark `DataFrameWriter` provides `partitionBy()` function to partition
+the Avro at the time of writing. Partition improves performance on
+reading by reducing Disk I/O.
+
+```
+val data = Seq(("James ","","Smith",2018,1,"M",3000),
+      ("Michael ","Rose","",2010,3,"M",4000),
+      ("Robert ","","Williams",2010,3,"M",4000),
+      ("Maria ","Anne","Jones",2005,5,"F",4000),
+      ("Jen","Mary","Brown",2010,7,"",-1)
+    )
+
+val columns = Seq("firstname", "middlename", "lastname", "dob_year",
+ "dob_month", "gender", "salary")
+import spark.sqlContext.implicits._
+val df = data.toDF(columns:_*)
+
+df.write.partitionBy("dob_year","dob_month")
+        .format("avro").save("person_partition.avro")
+```
+
+
+
+This example creates partition by "date of birth year and month" on
+person data. As shown in the below screenshot, Avro creates a folder for
+each partition data.
+
+![](./images/spark-avro-1024x344.jpg)
+
+Reading Avro Partition Data
+--------------------------------------------------------------------------------------------------
+
+When we try to retrieve the data from partition, It just reads the data
+from the partition folder without scanning entire Avro files.
+
+```
+spark.read
+      .format("avro")
+      .load("person_partition.avro")
+      .where(col("dob_year") === 2010)
+      .show()
+```
+
+
+
+Using Avro Schema
+------------------------------------------------------------------------------
+
+Avro schemas are usually defined with .avsc extension and the format of
+the file is in JSON. Will store below schema in `person.avsc` file and
+provide this file using option() while reading an Avro file. This schema
+provides the structure of the Avro file with field names and it's data
+types.
+
+
+```
+{
+  "type": "record",
+  "name": "Person",
+  "namespace": "com.sparkbyexamples",
+  "fields": [
+    {"name": "firstname","type": "string"},
+    {"name": "middlename","type": "string"},
+    {"name": "lastname","type": "string"},
+    {"name": "dob_year","type": "int"},
+    {"name": "dob_month","type": "int"},
+    {"name": "gender","type": "string"},
+    {"name": "salary","type": "int"}
+  ]
 }
 ```
 
 
 
-#### Conclusion:
+You can download Avro schema example from
+[GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-avro-examples/src/main/scala/com/sparkbyexamples/spark/dataframe/avro/AvroExample.scala)
 
-You have learned how to read a write an apache parquet data files in
-Spark and also learned [how to improve the
-performance]
-by using partition and filtering data with a partition key and finally
-appending to and overwriting existing parquet files.
+```
+val schemaAvro = new Schema.Parser()
+      .parse(new File("src/main/resources/person.avsc"))
 
+val df = spark.read
+              .format("avro")
+              .option("avroSchema", schemaAvro.toString)
+              .load("person.avro")
+```
+
+
+
+Alternatively, we can also specify the [StructType using the schema
+method].
+
+Using Avro with Spark SQL
+----------------------------------------------------------------------------------------------
+
+We can also read Avro data files using SQL, to do this, first, create a
+temporary table by pointing to the Avro data file and run the SQL
+command on the table.
+
+```
+spark.sqlContext.sql("CREATE TEMPORARY VIEW PERSON USING avro 
+OPTIONS (path \"person.avro\")")
+spark.sqlContext.sql("SELECT * FROM PERSON").show()
+```
+
+
+
+#### **Conclusion:**
+
+We have seen examples of how to write Avro data files and how to read
+using Spark DataFrame. Also, I've explained working with Avro partition
+and how it improves while reading Avro file. Using Partition we can
+achieve a significant performance on reading.

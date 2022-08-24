@@ -1,133 +1,158 @@
 
 
-Spark -- Read multiple text files into single RDD?
-==================================================
+Spark Load CSV File into RDD
+============================
 
-
-Spark core provides `textFile()` & `wholeTextFiles()` methods in
+In this tutorial, I will explain how to load a CSV file into Spark RDD
+using a Scala example. Using the textFile() the method in
 [SparkContext]
-class which is used to read single and multiple text or csv files into a
-single [Spark RDD].
-Using this method we can also read all files from a directory and files
-with a specific pattern.
+class we can read CSV files, multiple CSV files (based on pattern
+matching), or all files from a directory into RDD \[String\] object.
 
 
 
-textFile() -- Read single or multiple text, csv files and returns a
-single Spark RDD \[String\]
+Before we start, let's assume we have the following CSV file names with
+comma delimited file contents at folder "c:/tmp/files" and I use these
+files to demonstrate the examples.
 
-wholeTextFiles() -- Reads single or multiple files and returns a single
-RDD\[Tuple2\[String, String\]\], where first value (\_1) in a tuple is a
-file name and second value (\_2) is content of the file.
+  -----------------------------------------------------------------------
+  File Name                           File Contents
+  ----------------------------------- -----------------------------------
+  text01.csv                          Col1,Col2\
+                                      One,1\
+                                      Eleven,11
 
+  text02.csv                          Col1,Col2\
+                                      Two,2\
+                                      Twenty One,21
 
+  text03.csv                          Col1,Col2\
+                                      Three,3
 
-In this article let's see some examples with both of these methods using
-Scala and PySpark languages.
+  text04.csv                          Col1,Col2\
+                                      Four,4
 
--   [Read all text files from a directory into a single
-    RDD]
--   [Read multiple text files into a single
-    RDD]
--   [Read all text files matching a pattern to single
-    RDD]
--   [Read files from multiple directories into single
-    RDD]
--   [Reading text files from nested directories into Single
-    RDD]
--   [Reading all text files separately and union to create a Single
-    RDD]
--   [Reading CSV
-    files]
-
-Before we start, let's assume we have the following file names and file
-contents at folder "c:/tmp/files" and I use these files to demonstrate
-the examples.
-
-  File Name     File Contents
-  ------------- ---------------
-  text01.txt    One,1
-  text02.txt    Two,2
-  text03.txt    Three,3
-  text04.txt    Four,4
-  invalid.txt   Invalid,I
-
-Spark Read all text files from a directory into a single RDD
---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-In Spark, by inputting path of the directory to the` textFile()` method
-reads all text files and creates a single RDD. Make sure you do not have
-a nested directory If it finds one Spark process fails with an error.
+  invalid.csv                         Col1,Col2\
+                                      Invalid,I
+  -----------------------------------------------------------------------
 
 
+
+Load CSV file into RDD
+----------------------------------------------------------------------------------------
+
+textFile() method read an entire CSV record as a String and returns
+RDD\[String\], hence, we need to write additional code in Spark to
+transform RDD\[String\] to RDD\[Array\[String\]\] by splitting the
+string record with a delimiter.
+
+
+
+The below example reads a file into "rddFromFile" RDD object, and each
+element in RDD represents as a String.
 
 ```
-val rdd = spark.sparkContext.textFile("C:/tmp/files/*")
-rdd.foreach(f=>{
-    println(f)
-})
+  val rddFromFile = spark.sparkContext.textFile("C:/tmp/files/text01.txt")
 ```
 
 
 
-This example reads all files from a directory, creates a single RDD and
-prints the contents of the RDD.
+But, we would need every record in a CSV to split by comma delimiter and
+store it in RDD as multiple columns, In order to achieve this, we should
+use `map()` transformation on RDD where we will convert RDD\[String\] to
+RDD\[Array\[String\] by splitting every record by comma delimiter. map()
+method returns a new RDD instead of updating existing.
 
 ```
-Invalid,I
-One,1
-Two,2
-Three,3
-Four,4
-```
-
-
-
-If you are running on a cluster you should first collect the data in
-order to print on a console as shown below.
-
-```
-rdd.collect.foreach(f=>{
-println(f)
-})
-```
-
-
-
-Let's see a similar example with `wholeTextFiles()` method. note that
-this returns an RDD\[Tuple2\]. where first value (\_1) in a tuple is a
-file name and second value (\_2) is content of the file.
-
-```
-  val rddWhole = spark.sparkContext.wholeTextFiles("C:/tmp/files/*")
-  rddWhole.foreach(f=>{
-    println(f._1+"=>"+f._2)
+ val rdd = rddFromFile.map(f=>{
+    f.split(",")
   })
 ```
 
 
 
-Yields below output.
+Now, read the data from rdd by using `foreach`, since the elements in
+RDD are array, we need to use the index to retrieve each element from an
+array.
+
+
 
 ```
-file:/C:/tmp/files/invalid.txt=>Invalid,I
-file:/C:/tmp/files/text01.txt=>One,1
-file:/C:/tmp/files/text02.txt=>Two,2
-file:/C:/tmp/files/text03.txt=>Three,3
-file:/C:/tmp/files/text04.txt=>Four,4
+  rdd.foreach(f=>{
+    println("Col1:"+f(0)+",Col2:"+f(1))
+  })
 ```
 
 
 
-Spark Read multiple text files into a single RDD
---------------------------------------------------------------------------------------------------------------------------------------------
-
-When you know the names of the multiple files you would like to read,
-just input all file names with comma separator in order to create a
-single RDD.
+Note that the output we get from the above "println" also contains
+header names from a CSV file as header considered as data itself in RDD.
+We need to skip the header while processing the data. This is where the
+DataFrame comes handy to read CSV file with a header and handles a lot
+more options and file formats.
 
 ```
-  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/text01.txt,C:/tmp/files/text02.txt")
+Col1:col1,Col2:col2
+Col1:One,Col2:1
+Col1:Eleven,Col2:11
+```
+
+
+
+Let's see how to collect the data from RDD using `collect()`. In this
+case, collect() method returns Array\[Array\[String\]\] type where the
+first Array represents the RDD data and inner array is a record.
+
+```
+  rdd.collect().foreach(f=>{
+    println("Col1:"+f(0)+",Col2:"+f(1))
+  })
+```
+
+
+
+This example also yields the same as the above output.
+
+
+
+
+
+
+Skip Header From CSV file
+----------------------------------------------------------------------------------------------
+
+When you have a header with column names in a CSV file and to read and
+process with Spark RDD, you need to skip the header as there is no way
+in RDD to specify your file has a header.
+
+rdd.mapPartitionsWithIndex { (idx, iter) =\> if (idx == 0) iter.drop(1)
+else iter }
+
+Read Multiple CSV Files into RDD
+------------------------------------------------------------------------------------------------------------
+
+To read multiple CSV files in Spark, just use textFile() method on
+[SparkContext]
+object by passing all file names comma separated. The below example
+reads text01.csv & text02.csv files into single RDD.
+
+```
+  val rdd4 = spark.sparkContext.textFile("C:/tmp/files/text01.csv,C:/tmp/files/text02.csv")
+  rdd4.foreach(f=>{
+    println(f)
+  })
+```
+
+
+
+Read all CSV Files in a Directory into RDD
+--------------------------------------------------------------------------------------------------------------------------------
+
+To read all CSV files in a directory or folder, just pass a directory
+path to the testFile() method.
+
+```
+  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/*")
   rdd3.foreach(f=>{
     println(f)
   })
@@ -135,131 +160,15 @@ single RDD.
 
 
 
-This read file text01.txt & text02.txt files and outputs below content.
-
-```
-One,1
-Two,2
-```
-
-
-
-Read all text files matching a pattern to single RDD
-----------------------------------------------------------------------------------------------------------------------------------------------------
-
-textFile() method also accepts pattern matching and wild characters. For
-example below snippet read all files start with text and with the
-extension ".txt" and creates single RDD.
-
-```
-  val rdd2 = spark.sparkContext.textFile("C:/tmp/files/text*.txt")
-  rdd2.foreach(f=>{
-    println(f)
-  })
-```
-
-
-
-Yields below output.
-
-```
-One,1
-Two,2
-Three,3
-Four,4
-```
-
-
-
-Read files from multiple directories into single RDD
-----------------------------------------------------------------------------------------------------------------------------------------------------
-
-It also supports reading files and multiple directories combination.
-
-```
-  val rdd2 = spark.sparkContext.textFile("C:/tmp/dir1/*,C:/tmp/dir2/*,c:/tmp/files/text01.txt")
-  rdd2.foreach(f=>{
-    println(f)
-  })
-```
-
-
-
-Yields below output
-
-```
-One,1
-Two,2
-Invalid,I
-One,1
-Two,2
-Three,3
-Four,4
-```
-
-
-
-Reading text files from nested directories into Single RDD
-----------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-textFile() and wholeTextFile() returns an error when it finds a nested
-folder hence, first using scala, Java, Python languages create a file
-path list by traversing all nested folders and pass all file names with
-comma separator in order to create a single RDD.
-
-Reading all text files separately and union to create a Single RDD
---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-You can also read all text files into a separate RDD's and union all
-these to create a single RDD.
-
-Reading multiple CSV files into RDD
-------------------------------------------------------------------------------------------------------------------
-
-Spark RDD's doesn't have a method to read csv file formats hence we will
-use textFile() method to read csv file like any other text file into RDD
-and split the record based on comma, pipe or any other delimiter.
-
-```
- val rdd5 = spark.sparkContext.textFile("C:/tmp/files/*")
-  val rdd6 = rdd5.map(f=>{
-    f.split(",")
-  })
-
-  rdd6.foreach(f => {
-    println("Col1:"+f(0)+",Col2:"+f(1))
-  })
-```
-
-
-
-Here, we read all csv files in a directory into RDD, we apply map
-transformation to split the record on comma delimiter and a map returns
-another RDD "rdd6" after transformation. finally, we iterate rdd6, reads
-the column based on an index.
-
-Note: You can't update RDD as they are immutable. this example yields
-the below output.
-
-```
-Col1:Invalid,Col2:I
-Col1:One,Col2:1
-Col1:Two,Col2:2
-Col1:Three,Col2:3
-Col1:Four,Col2:4
-```
-
-
-
-Complete code
-----------------------------------------------------------------------
+### Complete example
 
 ```
 package com.sparkbyexamples.spark.rdd
 
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
-object ReadMultipleFiles extends App {
+object ReadMultipleCSVFiles extends App {
 
   val spark:SparkSession = SparkSession.builder()
     .master("local[1]")
@@ -268,43 +177,41 @@ object ReadMultipleFiles extends App {
 
   spark.sparkContext.setLogLevel("ERROR")
 
-  println("read all text files from a directory to single RDD")
-  val rdd = spark.sparkContext.textFile("C:/tmp/files/*")
-  rdd.foreach(f=>{
-    println(f)
+  println("spark read csv files from a directory into RDD")
+  val rddFromFile = spark.sparkContext.textFile("C:/tmp/files/text01.csv")
+  println(rddFromFile.getClass)
+
+  val rdd = rddFromFile.map(f=>{
+    f.split(",")
   })
 
-  println("read text files base on wildcard character")
-  val rdd2 = spark.sparkContext.textFile("C:/tmp/files/text*.txt")
+  println("Iterate RDD")
+  rdd.foreach(f=>{
+    println("Col1:"+f(0)+",Col2:"+f(1))
+  })
+  println(rdd)
+
+  println("Get data Using collect")
+  rdd.collect().foreach(f=>{
+    println("Col1:"+f(0)+",Col2:"+f(1))
+  })
+
+  println("read all csv files from a directory to single RDD")
+  val rdd2 = spark.sparkContext.textFile("C:/tmp/files/*")
   rdd2.foreach(f=>{
     println(f)
   })
 
-  println("read multiple text files into a RDD")
-  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/text01.txt,C:/tmp/files/text02.txt")
+  println("read csv files base on wildcard character")
+  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/text*.csv")
   rdd3.foreach(f=>{
     println(f)
   })
 
-  println("Read files and directory together")
-  val rdd4 = spark.sparkContext.textFile("C:/tmp/files/text01.txt,C:/tmp/files/text02.txt,C:/tmp/files/*")
+  println("read multiple csv files into a RDD")
+  val rdd4 = spark.sparkContext.textFile("C:/tmp/files/text01.csv,C:/tmp/files/text02.csv")
   rdd4.foreach(f=>{
     println(f)
-  })
-
-
-  val rddWhole = spark.sparkContext.wholeTextFiles("C:/tmp/files/*")
-  rddWhole.foreach(f=>{
-    println(f._1+"=>"+f._2)
-  })
-
-  val rdd5 = spark.sparkContext.textFile("C:/tmp/files/*")
-  val rdd6 = rdd5.map(f=>{
-    f.split(",")
-  })
-
-  rdd6.foreach(f => {
-    println("Col1:"+f(0)+",Col2:"+f(1))
   })
 
 }
@@ -312,7 +219,13 @@ object ReadMultipleFiles extends App {
 
 
 
-This complete code is also available on
-[GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/rdd/ReadMultipleFiles.scala)
-for reference.
+This complete example can be downloaded from [GitHub
+project](https://github.com/sparkbyexamples/spark-examples/blob/bfef54903032637b3b8d92591c64908fcad15369/spark-sql-examples/src/main/scala/com/sparkbyexamples/spark/rdd/ReadMultipleCSVFiles.scala)
+
+### Conclusion
+
+In this tutorial you have learned how to read a single CSV file,
+multiples CSV files and reading all CSV files from a directory/folder
+into a single Spark RDD. You have also learned how to skip the header
+while reading CSV files into RDD.
 

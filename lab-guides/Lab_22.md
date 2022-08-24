@@ -1,331 +1,245 @@
 
-Spark Read and Write JSON file into DataFrame
-=============================================
+
+Spark Read XML file using Databricks API
+========================================
 
 
 
-
-1. Spark Read JSON File into DataFrame
------------------------------------------------------------------------------------------------------------------------
-
-Using `spark.read.json("path")` or
-`spark.read.format("json").load("path")` you can read a JSON file into a
-Spark DataFrame, these methods take a file path as an argument. 
-
-Unlike [reading a
-CSV],
-By default JSON data source inferschema from an input file.
+Apache Spark can also be used to process or read simple to complex
+nested XML files into Spark DataFrame and writing it back to XML using
+Databricks [Spark XML API](https://github.com/databricks/spark-xml)
+(spark-xml) library. In this article, I will explain how to read XML
+file with several options using the Scala example.
 
 
+Databricks Spark-XML Maven dependency
+----------------------------------------------------------------------------------------------------------------------
 
-Refer dataset used in this article at [zipcodes.json on
-GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/main/resources/zipcodes.json)
+Processing XML files in Apache Spark is enabled by using below
+Databricks spark-xml dependency into the maven pom.xml file.
 
 ```
-//read json file into dataframe
-val df = spark.read.json("src/main/resources/zipcodes.json")
-df.printSchema()
-df.show(false)
+<dependency>
+     <groupId>com.databricks</groupId>
+     <artifactId>spark-xml_2.11</artifactId>
+     <version>0.6.0</version>
+ </dependency>
 ```
 
+Spark Read XML into DataFrame
+------------------------------------------------------------------------------------------------------
 
-
-When you use` format("json")` method, you can also specify the Data
-sources by their fully qualified name (i.e.,
-`org.apache.spark.sql.json`), for built-in sources, you can also use
-short name "json". 
-
-2. Read JSON file from multiline
------------------------------------------------------------------------------------------------------------
-
-Sometimes you may want to read records from JSON file that scattered
-multiple lines, In order to read such files, use-value true to
-[multiline]
-option, by default multiline option, is set to false.
+Databricks Spark-XML package allows us to read simple or nested XML
+files into DataFrame, once DataFrame is created, we can leverage its
+APIs to perform transformations and actions like any other DataFrame.
 
 
 
+Spark-XML API accepts several options while reading an XML file. for
+example, option `rowTag `is used to specify the rows tag. `rootTag` is
+used to specify the root tag of the input nested XML
 
-
-
-Below is the input file we going to read, this same file is also
-available at [multiline-zipcode.json on
-GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/main/resources/multiline-zipcode.json). 
+Input XML file we use on this example is available at
+[GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-sql-examples/src/main/resources/persons.xml)
+repository.
 
 ```
-[{
-  "RecordNumber": 2,
-  "Zipcode": 704,
-  "ZipCodeType": "STANDARD",
-  "City": "PASEO COSTA DEL SUR",
-  "State": "PR"
-},
-{
-  "RecordNumber": 10,
-  "Zipcode": 709,
-  "ZipCodeType": "STANDARD",
-  "City": "BDA SAN LUIS",
-  "State": "PR"
-}]
+val df = spark.read
+      .format("com.databricks.spark.xml")
+      .option("rowTag", "person")
+      .xml("src/main/resources/persons.xml")
 ```
 
 
 
-Using `spark.read.option("multiline","true")`
+Alternatively, you can also use the short form `format("xml")` and
+`load("src/main/resources/persons.xml")`
+
+
+
+While API reads XML file into DataFrame, It automatically infers the
+schema based on data. Below schema ouputs from `df.printSchma()` .
+
 
 ```
-//read multiline json file
-val multiline_df = spark.read.option("multiline","true")
-      .json("src/main/resources/multiline-zipcode.json")
-multiline_df.show(false)    
-```
-
-
-
-3. Reading Multiple Files at a Time
------------------------------------------------------------------------------------------------------------------
-
-Using the `spark.read.json()` method you can also read multiple JSON
-files from different paths, just pass all file names with fully
-qualified paths by separating comma, for example
-
-```
-//read multiple files
-val df2 = spark.read.json(
-     "src/main/resources/zipcodes_streaming/zipcode1.json",
-     "src/main/resources/zipcodes_streaming/zipcode2.json")
-df2.show(false)
+root
+ |-- _id: long (nullable = true)
+ |-- dob_month: long (nullable = true)
+ |-- dob_year: long (nullable = true)
+ |-- firstname: string (nullable = true)
+ |-- gender: string (nullable = true)
+ |-- lastname: string (nullable = true)
+ |-- middlename: string (nullable = true)
+ |-- salary: struct (nullable = true)
+ |    |-- _VALUE: long (nullable = true)
+ |    |-- _currency: string (nullable = true)
 ```
 
 
 
-4. Reading all Files in a Directory
------------------------------------------------------------------------------------------------------------------
-
-We can read all JSON files from a directory into DataFrame just by
-passing directory as a path to the `json()` method. Below snippet,
-"[zipcodes\_streaming](https://github.com/fenago/spark-scala-examples/tree/master/src/main/resources/zipcodes_streaming)"
-is a folder that contains multiple JSON files.
+We can also supply our own struct schema and use it while reading a file
+as described below.
 
 ```
-//read all files from a folder
-val df3 = spark.read.json("src/main/resources/zipcodes_streaming")
-df3.show(false)
-```
-
-
-
-5. Reading files with a user-specified custom schema
----------------------------------------------------------------------------------------------------------------------------------------------------
-
-Spark Schema defines the structure of the data, in other words, it is
-the structure of the DataFrame. Spark SQL provides StructType &
-StructField classes to programmatically specify the structure to the
-DataFrame.
-
-If you know the
-[schema]
-of the file ahead and do not want to use the default `inferSchema`
-option for column names and types, use user-defined custom column names
-and type using schema option.
-
-Use the [StructType class to create a custom
-schema],
-below we initiate this class and use add a method to add columns to it
-by providing the column name, data type and nullable option.
-
-```
-//Define custom schema
-val schema = new StructType()
-      .add("RecordNumber",IntegerType,true)
-      .add("Zipcode",IntegerType,true)
-      .add("ZipCodeType",StringType,true)
-      .add("City",StringType,true)
-      .add("State",StringType,true)
-      .add("LocationType",StringType,true)
-      .add("Lat",DoubleType,true)
-      .add("Long",DoubleType,true)
-      .add("Xaxis",IntegerType,true)
-      .add("Yaxis",DoubleType,true)
-      .add("Zaxis",DoubleType,true)
-      .add("WorldRegion",StringType,true)
-      .add("Country",StringType,true)
-      .add("LocationText",StringType,true)
-      .add("Location",StringType,true)
-      .add("Decommisioned",BooleanType,true)
-      .add("TaxReturnsFiled",StringType,true)
-      .add("EstimatedPopulation",IntegerType,true)
-      .add("TotalWages",IntegerType,true)
-      .add("Notes",StringType,true)
-val df_with_schema = spark.read.schema(schema)
-        .json("src/main/resources/zipcodes.json")
-df_with_schema.printSchema()
-df_with_schema.show(false)
+ val schema = new StructType()
+      .add("_id",StringType)
+      .add("firstname",StringType)
+      .add("middlename",StringType)
+      .add("lastname",StringType)
+      .add("dob_year",StringType)
+      .add("dob_month",StringType)
+      .add("gender",StringType)
+      .add("salary",StringType)
+val df = spark.read
+  .option("rowTag", "book")
+  .schema(schema)
+  .xml("src/main/resources/persons.xml")
+df.show()
 ```
 
 
 
-6. Read JSON file using Spark SQL
--------------------------------------------------------------------------------------------------------------
+Output:
 
-Spark SQL also provides a way to read a JSON file by creating a
-temporary view directly from reading file using
-spark.sqlContext.sql("load json to temporary view")
+
+
+
+
+
+`show()` on DataFrame outputs the following.
+
 
 ```
-spark.sqlContext.sql("CREATE TEMPORARY VIEW zipcode USING json OPTIONS" + 
-      " (path 'src/main/resources/zipcodes.json')")
-spark.sqlContext.sql("select * from zipcodes").show(false)
++---+---------+--------+---------+------+--------+----------+---------------+
+|_id|dob_month|dob_year|firstname|gender|lastname|middlename|         salary|
++---+---------+--------+---------+------+--------+----------+---------------+
+|  1|        1|    1980|    James|     M|   Smith|      null|  [10000, Euro]|
+|  2|        6|    1990|  Michael|     M|    null|      Rose|[10000, Dollor]|
++---+---------+--------+---------+------+--------+----------+---------------+
 ```
 
 
 
-7. Options while reading JSON file
----------------------------------------------------------------------------------------------------------------
+#### Handling XML Attributes
 
-### 7.1 nullValues
+"\_" is added to the variable prefix for attributes, for example,
+\_value & \_currency are attributes from XML file. We can change the
+prefix to be any special character by using the option `attributePrefix`
+. Handling attributes can be disabled with the option `excludeAttribute`
 
-Using `nullValues` option you can specify the string in a JSON to
-consider as null. For example, if you want to consider a date column
-with a value "1900-01-01" set null on DataFrame.
+Spark Write DataFrame to XML File
+--------------------------------------------------------------------------------------------------------------
 
-### 7.2 dateFormat
-
-`dateFormat` option to used to set the format of the input [DateType and
-TimestampType]
-columns. Supports all
-[java.text.SimpleDateFormat](https://docs.oracle.com/javase/10/docs/api/java/time/format/DateTimeFormatter.html)
-formats.
-
-**Note:** Besides the above options, Spark JSON dataset also supports
-many other options.
-
-8. Applying DataFrame Transformations
----------------------------------------------------------------------------------------------------------------------
-
-Once you have [created
-DataFrame]
-from the JSON file, you can apply all transformation and actions
-DataFrame support. Please refer to the link for more details. 
-
-9. Write Spark DataFrame to JSON file
----------------------------------------------------------------------------------------------------------------------
-
-Use the Spark DataFrameWriter object "write" method on DataFrame to
-write a JSON file. 
+Use "com.databricks.spark.xml" DataSource on format method of the
+DataFrameWriter to write Spark DataFrame to XML file. This data source
+is provided as part of the Spark-XML API. simar to reading, write also
+takes options rootTag and rowTag to specify the root tag and row tag
+respectively on the output XML file.
 
 ```
 df2.write
- .json("/tmp/spark_output/zipcodes.json")
+      .format("com.databricks.spark.xml")
+      .option("rootTag", "persons")
+      .option("rowTag", "person")
+      .save("src/main/resources/persons_new.xml")
 ```
 
 
 
-### 9.1 Spark Options while writing JSON files
+This snippet writes a Spark DataFrame "df2" to XML file
+"pesons\_new.xml" with "persons" as root tag and "person" as row tag.
 
-While writing a JSON file you can use several options.  
+### Limitations:
 
-Other options available `nullValue`,`dateFormat`
+This API is most useful when reading and writing simple XML files.
+However, At the time of writing this article, this API has the following
+limitations.
 
-### 9.2 Saving modes
+-   Reading/Writing attribute to/from root element not supported in this
+    API.
+-   Doesn't support complex XML structures where you want to read header
+    and footer along with row elements.
 
-Spark DataFrameWriter also has a method mode() to specify SaveMode; the
-argument to this method either takes below string or a constant from
-`SaveMode` class.
+If you have one root element following data elements then Spark XML is
+GO to API. If you wanted to write a complex structure and this API is
+not suitable for you, please read below article where I've explained
+using XStream API
 
-overwrite -- mode is used to overwrite the existing file, alternatively,
-you can use `SaveMode.Overwrite`.
+[Spark -- Writing complex XML structures using XStream
+API]
 
-append -- To add the data to the existing file, alternatively, you can
-use `SaveMode.Append`.
+Write Spark XML DataFrame to Avro File
+------------------------------------------------------------------------------------------------------------------------
 
-ignore -- Ignores write operation when the file already exists,
-alternatively you can use `SaveMode.Ignore`.
+Once you create a DataFrame by reading XML, We can easily write it to
+Avro by using below maven dependency.
 
-errorifexists or error -- This is a default option when the file already
-exists, it returns an error, alternatively, you can use
-`SaveMode.ErrorIfExists`.
-
-```
-df2.write.mode(SaveMode.Overwrite).json("/tmp/spark_output/zipcodes.json")
-```
-
-
-
-10. Source Code for Reference
------------------------------------------------------------------------------------------------------
+Apache Avro is a serialization system and is used to store persistent
+data in a binary format. When Avro data is stored in a file, its schema
+is stored with it, so that files may be processed later by any program.
 
 ```
-package com.sparkbyexamples.spark.dataframe
-import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.types._
-object FromJsonFile {
-  def main(args:Array[String]): Unit = {
-    val spark: SparkSession = SparkSession.builder()
-      .master("local[3]")
-      .appName("SparkByExample")
-      .getOrCreate()
-    val sc = spark.sparkContext
-    //read json file into dataframe
-    val df = spark.read.json("src/main/resources/zipcodes.json")
-    df.printSchema()
-    df.show(false)
-    //read multiline json file
-    val multiline_df = spark.read.option("multiline", "true")
-      .json("src/main/resources/multiline-zipcode.json")
-    multiline_df.printSchema()
-    multiline_df.show(false)
-    //read multiple files
-    val df2 = spark.read.json(
-      "src/main/resources/zipcodes_streaming/zipcode1.json",
-      "src/main/resources/zipcodes_streaming/zipcode2.json")
-    df2.show(false)
-    //read all files from a folder
-    val df3 = spark.read.json("src/main/resources/zipcodes_streaming/*")
-    df3.show(false)
-    //Define custom schema
-    val schema = new StructType()
-      .add("City", StringType, true)
-      .add("Country", StringType, true)
-      .add("Decommisioned", BooleanType, true)
-      .add("EstimatedPopulation", LongType, true)
-      .add("Lat", DoubleType, true)
-      .add("Location", StringType, true)
-      .add("LocationText", StringType, true)
-      .add("LocationType", StringType, true)
-      .add("Long", DoubleType, true)
-      .add("Notes", StringType, true)
-      .add("RecordNumber", LongType, true)
-      .add("State", StringType, true)
-      .add("TaxReturnsFiled", LongType, true)
-      .add("TotalWages", LongType, true)
-      .add("WorldRegion", StringType, true)
-      .add("Xaxis", DoubleType, true)
-      .add("Yaxis", DoubleType, true)
-      .add("Zaxis", DoubleType, true)
-      .add("Zipcode", StringType, true)
-      .add("ZipCodeType", StringType, true)
-    val df_with_schema = spark.read.schema(schema)
-        .json("src/main/resources/zipcodes.json")
-    df_with_schema.printSchema()
-    df_with_schema.show(false)
-    spark.sqlContext.sql("CREATE TEMPORARY VIEW zipcode USING json OPTIONS" +
-      " (path 'src/main/resources/zipcodes.json')")
-    spark.sqlContext.sql("SELECT *FROM zipcode").show()
-    //Write json file
-    df2.write
-      .json("/tmp/spark_output/zipcodes.json")
-  }
-}
+<dependency>
+    <groupId>org.apache.spark</groupId>
+    <artifactId>spark-avro_2.11</artifactId>
+    <version>2.4.0</version>
+</dependency>
+```
+
+`format("avro")` is provided by spark-avro API to read/write Avro files.
+
+```
+df2.write.format("avro")
+      .mode(SaveMode.Overwrite)
+      .save("\tmp\spark_out\avro\persons.avro")
 ```
 
 
 
-Conclusion:
------------
+Below snippet provides writing to Avro file by using partitions.
 
-In this tutorial, you have learned how to read a JSON file with single
-line record and multiline record into Spark DataFrame, and also learned
-reading single and multiple files at a time and writing JSON file back
-to DataFrame using different save options.
+```
+df2.write.partitionBy("_id")
+        .format("avro").save("persons_partition.avro")
+```
 
+
+
+Write Spark XML DataFrame to Parquet File
+------------------------------------------------------------------------------------------------------------------------------
+
+Spark SQL provides a `parquet` method to read/write parquet files hence,
+no additional libraries are not needed, once the DatraFrame created from
+XML we can use the parquet method on DataFrameWriter class to write to
+the Parquet file.
+
+Apache Parquet is a columnar file format that provides optimizations to
+speed up queries and is a far more efficient file format than CSV or
+JSON. Spark SQL comes with a `parquet ` method to read data. It
+automatically captures the schema of the original data and reduces data
+storage by 75% on average.
+
+```
+df2.write
+      .parquet("\tmp\spark_output\parquet\persons.parquet")
+```
+
+
+
+Below snippet, writes DataFrame to parquet file with partition by
+"\_id".
+
+```
+df2.write
+      .partitionBy("_id")
+      .parquet("\tmp\spark_output\parquet\persons_partition.parquet")
+```
+
+
+
+#### Conclusion:
+
+In this article, you have learned how to read XML files into Apache
+Spark DataFrame and write it back to XML, Avro, and Parquet files after
+processing using spark xml API. Also, explains some limitations of using
+Databricks Spark-XML API.

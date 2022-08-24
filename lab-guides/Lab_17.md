@@ -1,135 +1,182 @@
 
 
-Spark Persistence Storage Levels
-================================
+Spark Accumulators Explained
+============================
+
+Spark Accumulators are shared variables which are only "added" through
+an associative and commutative operation and are used to perform
+counters (Similar to Map-reduce counters) or sum operations
 
 
 
-All different persistence (persist() method) storage level Spark/PySpark
-supports are available at `org.apache.spark.storage.StorageLevel` and
-`pyspark.StorageLevel` classes respectively. The storage level specifies
-how and where to persist or cache a Spark/PySpark RDD, DataFrame, and
-Dataset.
+Spark by default supports to create an accumulators of any numeric type
+and provide a capability to add custom accumulator types.
+
+Programmers can create following accumulators
 
 
 
-All these Storage levels are passed as an argument to the persist()
-method of the Spark/Pyspark RDD, DataFrame, and Dataset.
+-   named accumulators
+-   unnamed accumulators
 
-F**or example**
+When you create a named accumulator, you can see them on Spark web UI
+under the "Accumulator" tab. On this tab, you will see two tables; the
+first table "accumulable" -- consists of all named accumulator variables
+and their values. And on the second table "Tasks" -- value for each
+accumulator modified by a task.
 
+And, unnamed accumulators are not shows on Spark web UI, For all
+practical purposes it is suggestable to use named accumulators.
 
-
-```
-import org.apache.spark.storage.StorageLevel
-val rdd2 = rdd.persist(StorageLevel.MEMORY_ONLY_SER)
-or 
-val df2 = df.persist(StorageLevel.MEMORY_ONLY_SER)
-```
-
-
-
-Here, I will describe all storage levels available in Spark.
-
-Memory only Storage level
-----------------------------------------------------------------------------------------------
-
-`StorageLevel.MEMORY_ONLY` is the default behavior of the
-RDD `cache()` method
-and stores the RDD or DataFrame as deserialized objects to JVM memory.
-When there is not enough memory available it will not save DataFrame of
-some partitions and these will be re-computed as and when required.
-
-This takes more memory. but unlike RDD, this would be slower
-than **MEMORY\_AND\_DISK** level as it recomputes the unsaved
-partitions, and recomputing the in-memory columnar representation of the
-underlying table is expensive.
-
-
-
-Serialize in Memory
-----------------------------------------------------------------------------------
-
-`StorageLevel.MEMORY_ONLY_SER` is the same as `MEMORY_ONLY` but the
-difference being it stores RDD as serialized objects to JVM memory. It
-takes lesser memory (space-efficient) than MEMORY\_ONLY as it saves
-objects as serialized and takes an additional few more CPU cycles in
-order to deserialize.
-
-Memory only and Replicate
-----------------------------------------------------------------------------------------------
-
-`StorageLevel.MEMORY_ONLY_2` is same as `MEMORY_ONLY` storage level but
-replicate each partition to two cluster nodes.
-
-
-
-
-
-
-Serialized in Memory and Replicate
-----------------------------------------------------------------------------------------------------------------
-
-`StorageLevel.MEMORY_ONLY_SER_2` is same as `MEMORY_ONLY_SER` storage
-level but replicate each partition to two cluster nodes.
-
-Memory and Disk Storage level
+Creating Accumulator variable
 ------------------------------------------------------------------------------------------------------
 
-`StorageLevel.MEMORY_AND_DISK` is the default behavior of the DataFrame
-or Dataset. In this Storage Level, The DataFrame will be stored in JVM
-memory as deserialized objects. When required storage is greater than
-available memory, it stores some of the excess partitions into a disk
-and reads the data from the disk when required. It is slower as there is
-I/O involved.
+Spark by default provides accumulator methods for long, double and
+collection types. All these methods are present in
+[SparkContext]
+class and return `<a href="#LongAccumulator">LongAccumulator</a>`,
+`<a href="#DoubleAccumulator">DoubleAccumulator</a>`, and
+`<a href="#CollectionAccumulator">CollectionAccumulator</a>`
+respectively.
 
-Serialize in Memory and Disk
-----------------------------------------------------------------------------------------------------
 
-`StorageLevel.MEMORY_AND_DISK_SER` is same as `MEMORY_AND_DISK` storage
-level difference being it serializes the DataFrame objects in memory and
-on disk when space is not available.
 
-Memory, Disk and Replicate
------------------------------------------------------------------------------------------------
+-   Long Accumulator
+-   Double Accumulator
+-   Collection Accumulator
 
-`StorageLevel.MEMORY_AND_DISK_2` is Same as `MEMORY_AND_DISK` storage
-level but replicate each partition to two cluster nodes.
-
-Serialize in Memory, Disk and Replicate
--------------------------------------------------------------------------------------------------------------------------
-
-`StorageLevel.MEMORY_AND_DISK_SER_2` is same
-as `MEMORY_AND_DISK_SER` storage level but replicate each partition to
-two cluster nodes.
-
-Disk only storage level
-------------------------------------------------------------------------------------------
-
-In `StorageLevel.DISK_ONLY` storage level, DataFrame is stored only on
-disk and the CPU computation time is high as I/O involved.
-
-Disk only and Replicate
-------------------------------------------------------------------------------------------
-
-`StorageLevel.DISK_ONLY_2` is same as `DISK_ONLY` storage level but
-replicate each partition to two cluster nodes.
-
-When to use what?
------------------------------------------------------------------------------
-
-Below is the table representation of the Storage level, Go through the
-impact of space, CPU, and performance choose the one that best fits you.
+For example, you can create long accumulator on spark-shell using
 
 ```
-Storage Level    Space used  CPU time  In memory  On-disk  Serialized   Recompute some partitions
-----------------------------------------------------------------------------------------------------
-MEMORY_ONLY          High        Low       Y          N        N         Y    
-MEMORY_ONLY_SER      Low         High      Y          N        Y         Y
-MEMORY_AND_DISK      High        Medium    Some       Some     Some      N
-MEMORY_AND_DISK_SER  Low         High      Some       Some     Y         N
-DISK_ONLY            Low         High      N          Y        Y         N
+scala> val accum = sc.longAccumulator("SumAccumulator")
+accum: org.apache.spark.util.LongAccumulator = LongAccumulator(id: 0, name: Some(SumAccumulator), value: 0)
 ```
 
 
 
+The above statement creates a named accumulator "SumAccumulator". Now,
+Let's see how to add up the elements from an array to this accumulator.
+
+```
+scala> sc.parallelize(Array(1, 2, 3)).foreach(x => accum.add(x))
+-----
+-----
+scala> accum.value
+res2: Long = 6
+```
+
+
+
+Each of these accumulator classes has several methods, among these,
+`add()` method call from tasks running on the cluster. Tasks can't read
+the values from the accumulator and only the driver program can read
+accumulators value using the `value()` method.
+
+
+
+
+
+
+Long Accumulator
+----------------------------------------------------------------------------
+
+longAccumulator() methods from SparkContext returns LongAccumulator
+
+**Syntax**
+
+```
+//Long Accumulator
+def longAccumulator : org.apache.spark.util.LongAccumulator
+def longAccumulator(name : scala.Predef.String) : org.apache.spark.util.LongAccumulator
+```
+
+
+
+You can create named accumulators for long type using
+`SparkContext.longAccumulator(v)` and for unnamed use signature that
+doesn't take an argument.
+
+```
+  val spark = SparkSession.builder()
+    .appName("SparkByExample")
+    .master("local")
+    .getOrCreate()
+
+  val longAcc = spark.sparkContext.longAccumulator("SumAccumulator")
+  
+  val rdd = spark.sparkContext.parallelize(Array(1, 2, 3))
+
+  rdd.foreach(x => longAcc.add(x))
+  println(longAcc.value)
+```
+
+
+
+LongAccumulator class provides follwoing methods
+
+-   isZero
+-   copy
+-   reset
+-   add
+-   count
+-   sum
+-   avg
+-   merge
+-   value
+
+Double Accumulator
+--------------------------------------------------------------------------------
+
+For named double type using `SparkContext.doubleAccumulator(v)` and for
+unnamed use signature that doesn't take an argument.
+
+S**yntax**
+
+```
+//Double Accumulator
+def doubleAccumulator : org.apache.spark.util.DoubleAccumulator
+def doubleAccumulator(name : scala.Predef.String) : org.apache.spark.util.DoubleAccumulator
+```
+
+
+
+DoubleAccumulator class also provides methods similar to LongAccumulator
+
+Collection Accumulator
+----------------------------------------------------------------------------------------
+
+For named collection type using `SparkContext.collectionAccumulator(v)`
+and for unnamed use signature that doesn't take an argument.
+
+**Syntax**
+
+```
+//Collection Accumulator
+def collectionAccumulator[T] : org.apache.spark.util.CollectionAccumulator[T]
+def collectionAccumulator[T](name : scala.Predef.String) : org.apache.spark.util.CollectionAccumulator[T]
+```
+
+
+
+CollectionAccumulator class provides following methods
+
+-   isZero
+-   copyAndReset
+-   copy
+-   reset
+-   add
+-   merge
+-   value
+
+Note: Each of these accumulator classes has several methods, among
+these, `add()` method call from tasks running on the cluster. Tasks
+can't read the values from the accumulator and only the driver program
+can read accumulators value using the `value()` method.
+
+### Conclusion
+
+In this Spark accumulators shared variable article, you have learned the
+Accumulators are only "added" through an associative and commutative and
+operation and are used to perform counters (Similar to Map-reduce
+counters) or sum operations and also learned different Accumulator
+classes along with their methods.

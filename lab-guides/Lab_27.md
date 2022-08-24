@@ -1,318 +1,311 @@
 
-Spark Read from & Write to HBase table \| Example
-=================================================
+
+Spark Read ORC file into DataFrame
+==================================
 
 
 
 
-This tutorial explains how to read or load from and write Spark (2.4.X
-version) DataFrame rows to HBase table using `hbase-spark` connector and
-Datasource  `"org.apache.spark.sql.execution.datasources.hbase"` along
-with Scala example.
+
+Spark natively supports ORC data source to read ORC into DataFrame and
+write it back to the ORC file format using `orc()` method of
+`DataFrameReader` and `DataFrameWriter`. In this article, I will explain
+how to read an ORC file into Spark DataFrame, proform some filtering,
+creating a table by reading the ORC file, and finally writing is back by
+partition using scala examples.
 
 
 
+**Table of contents**
 
-Spark HBase library dependencies
---------------------------------
+-   What is ORC?
+-   ORC advantages
+-   Write Spark DataFrame to ORC file
+-   Read ORC file into Spark DataFrame
+-   Creating a table on ORC file & using SQL
+-   Using Partition
+-   Which compression to choose
 
-Below HBase libraries are required to connect Spark with the HBase
-database and perform read and write rows to the table.
+What is the ORC file?
+-------------------------------------------------------------------------------------
 
--   `hbase-client` This library provides by HBase which is used natively
-    to interact with HBase.
--   `hbase-spark` connector which provides HBaseContext to interact
-    Spark with HBase. HBaseContext pushes the configuration to the Spark
-    executors and allows it to have an HBase Connection per Executor.
+[ORC](https://orc.apache.org/) stands of Optimized Row Columnar which
+provides a highly efficient way to store the data in a self-describing,
+type-aware column-oriented format for the Hadoop ecosystem. This is
+similar to other columnar storage formats Hadoop supports such as
+RCFile,
+[parquet].
 
-Below are complete maven dependencies to run the below examples in your
-environment. Note that "hbase-client" has not provided as a dependency
-since Spark HBase connector provides this as a transitive dependency and
-this is a recommended way otherwise you may come across incompatibility
-issues between these two.
+
+
+ORC file format heavily used as a storage for Apache Hive due to its
+highly efficient way of storing data which enables high-speed processing
+and ORC also used or natively supported by many frameworks like Hadoop
+MapReduce, Apache Spark, Pig, Nifi, and many more.
+
+### ORC Advantages
+
+-   **Compression**: ORC stores data as columns and in compressed format
+    hence it takes way less disk storage than other formats.
+-   **Reduces I/O**: ORC reads only columns that are mentioned in a
+    query for processing hence it takes reduces I/O.
+-   **Fast reads**: ORC is used for high-speed processing as it by
+    default creates built-in index and has some default aggregates like
+    min/max values for numeric data.
+
+ORC Compression
+--------------------------------------------------------------------------
+
+Spark supports the following compression options for ORC data source. By
+default, it uses `SNAPPY` when not specified.
+
+-   SNAPPY
+-   ZLIB
+-   LZO
+-   NONE
+
+Create a DataFrame
+--------------------------------------------------------------------------------
+
+Spark by default supports ORC file formats without importing third party
+ORC dependencies. Since we don't have an ORC file to read, first will
+create an ORC file from the DataFrame. Below is a sample DataFrame we
+use to create an ORC file.
 
 
 
 ```
-  <dependencies>
-
-    <dependency>
-      <groupId>org.scala-lang</groupId>
-      <artifactId>scala-library</artifactId>
-      <version>2.11.12</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-core_2.11</artifactId>
-      <version>2.4.0</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-sql_2.11</artifactId>
-      <version>2.4.0</version>
-      <scope>compile</scope>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.spark</groupId>
-      <artifactId>spark-streaming_2.11</artifactId>
-      <version>2.4.0</version>
-    </dependency>
-
-   <dependency>
-     <groupId>org.apache.hbase.connectors.spark</groupId>
-     <artifactId>hbase-spark</artifactId>
-     <version>1.0.0</version>
-   </dependency>
-
-  </dependencies>
-```
-
-Writing Spark DataFrame to HBase table using "hbase-spark" connector
---------------------------------------------------------------------
-
-First, let's create a DataFrame which we will store to HBase using
-"hbase-spark" connector. In this snippet, we are creating an employee DF
-with 3 rows.
-
-```
-case class Employee(key: String, fName: String, lName: String,
-                      mName:String, addressLine:String, city:String,
-                      state:String, zipCode:String)
-
- val data = Seq(Employee("1","Abby","Smith","K","3456 main", "Orlando","FL","45235"),
-      Employee("2","Amaya","Williams","L","123 Orange","Newark", "NJ", "27656"),
-      Employee("3","Alchemy","Davis","P","Warners","Sanjose","CA", "34789"))
-
-    val spark: SparkSession = SparkSession.builder()
-      .master("local[1]")
-      .appName("sparkexamples")
-      .getOrCreate()
-
-    import spark.implicits._
-    val df = spark.sparkContext.parallelize(data).toDF
+val data =Seq(("James ","","Smith","36636","M",3000),
+  ("Michael ","Rose","","40288","M",4000),
+  ("Robert ","","Williams","42114","M",4000),
+  ("Maria ","Anne","Jones","39192","F",4000),
+  ("Jen","Mary","Brown","","F",-1))
+val columns=Seq("firstname","middlename","lastname","dob","gender","salary")
+val df=spark.createDataFrame(data).toDF(columns:_*)
+df.printSchema()
+df.show(false)
 ```
 
 
 
-Now, Let's define a catalog which bridges the gap between HBase KV store
-and DataFrame table structure. using this we will also map the column
-names between the two structures and keys. please refer below example
-for the snippet. within the catalog, we also specify the HBase table we
-are going to use and the namespace. here, we are using the "employee"
-table in the "default" namespace.
+Spark Write ORC file
+------------------------------------------------------------------------------------
+
+Spark `DataFrameWriter` uses `orc()` method to write or create ORC file
+from DataFrame. This method takes a path as an argument where to write a
+ORC file.
 
 ```
-def catalog =
-      s"""{
-         |"table":{"namespace":"default", "name":"employee"},
-         |"rowkey":"key",
-         |"columns":{
-         |"key":{"cf":"rowkey", "col":"key", "type":"string"},
-         |"fName":{"cf":"person", "col":"firstName", "type":"string"},
-         |"lName":{"cf":"person", "col":"lastName", "type":"string"},
-         |"mName":{"cf":"person", "col":"middleName", "type":"string"},
-         |"addressLine":{"cf":"address", "col":"addressLine", "type":"string"},
-         |"city":{"cf":"address", "col":"city", "type":"string"},
-         |"state":{"cf":"address", "col":"state", "type":"string"},
-         |"zipCode":{"cf":"address", "col":"zipCode", "type":"string"}
-         |}
-         |}""".stripMargin
+df.write.orc("/tmp/orc/data.orc")
 ```
 
 
 
-Finally, let's store the DataFrame to HBase table using save() function
-on the data frame. from the below example, format
-takes `"org.apache.spark.sql.execution.datasources.hbase"` DataSource
-defined in "hbase-spark" API which enables us to use DataFrame with
-HBase tables. And, `df.write.options` take the catalog and specifies to
-use 4 regions in cluster. Finally, `save()`writes it to HBase table.
+Alternatively, you can also write using `format("orc")`
 
 ```
-df.write.options(
-      Map(HBaseTableCatalog.tableCatalog -> catalog, HBaseTableCatalog.newTable -> "4"))
-      .format("org.apache.spark.sql.execution.datasources.hbase")
-      .save()
+df.write.format("orc").save("/tmp/orc/data.orc")
 ```
 
 
 
-Below is the complete example, and the same is available at
-[GitHub](https://github.com/sparkbyexamples/spark-hbase-connector-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/hbase/dataframe/HBaseSparkInsert.scala)
+![Spark write ORC in snappy
+compression](./Lab_29_files/spark-read-orc-1.jpg)
+
+Spark by default uses `snappy` compression while writing ORC file. You
+can notice this on the part file names. And you can change the
+compression from default `snappy` to either `none` or `zlib` using an
+option compression
 
 ```
-package com.sparkbyexamples.spark.hbase.dataframe
-
-import org.apache.hadoop.hbase.spark.datasources.HBaseTableCatalog
-import org.apache.spark.sql.SparkSession
-
-object HBaseSparkInsert {
-
-  case class Employee(key: String, fName: String, lName: String,
-                      mName:String, addressLine:String, city:String,
-                      state:String, zipCode:String)
-
-  def main(args: Array[String]): Unit = {
-
-    def catalog =
-      s"""{
-         |"table":{"namespace":"default", "name":"employee"},
-         |"rowkey":"key",
-         |"columns":{
-         |"key":{"cf":"rowkey", "col":"key", "type":"string"},
-         |"fName":{"cf":"person", "col":"firstName", "type":"string"},
-         |"lName":{"cf":"person", "col":"lastName", "type":"string"},
-         |"mName":{"cf":"person", "col":"middleName", "type":"string"},
-         |"addressLine":{"cf":"address", "col":"addressLine", "type":"string"},
-         |"city":{"cf":"address", "col":"city", "type":"string"},
-         |"state":{"cf":"address", "col":"state", "type":"string"},
-         |"zipCode":{"cf":"address", "col":"zipCode", "type":"string"}
-         |}
-         |}""".stripMargin
+  df.write.mode("overwrite")
+    .option("compression","zlib")
+    .orc("/tmp/orc/data-zlib.orc")
+```
 
 
-    val data = Seq(Employee("1","Abby","Smith","K","3456 main", "Orlando","FL","45235"),
-      Employee("2","Amaya","Williams","L","123 Orange","Newark", "NJ", "27656"),
-      Employee("3","Alchemy","Davis","P","Warners","Sanjose","CA", "34789"))
 
-    val spark: SparkSession = SparkSession.builder()
-      .master("local[1]")
-      .appName("sparkexamples")
-      .getOrCreate()
+This creates ORC files with `zlib` compression.
 
-    import spark.implicits._
-    val df = spark.sparkContext.parallelize(data).toDF
+![Spark write ORC in zlib
+compression]
 
-    df.write.options(
-      Map(HBaseTableCatalog.tableCatalog -> catalog, HBaseTableCatalog.newTable -> "4"))
-      .format("org.apache.spark.sql.execution.datasources.hbase")
-      .save()
-  }
+Using append save mode, you can append a DataFrame to an existing ORC
+file. Incase to overwrite use overwrite save mode.
+
+```
+df.write.mode('append').orc("/tmp/orc/people.orc")
+df.write.mode('overwrite').orc("/tmp/orc/people.orc")
+```
+
+
+
+Spark Read ORC file
+----------------------------------------------------------------------------------
+
+Use Spark DataFrameReader's orc() method to read ORC file into
+DataFrame. This supports reading snappy, zlib or no compression, it is
+not necessary to specify in compression option while reading a ORC file.
+
+```
+df.read.orc("/tmp/orc/data.orc")
+```
+
+
+
+In order to read ORC files from Amazon S3, use the below prefix to the
+path along with [third-party dependencies and
+credentials].
+
+-   **s3:\\\\** = \> First gen
+-   **s3n:\\\\** =\> second Gen
+-   **s3a:\\\\** =\> Third gen
+
+Executing SQL queries on DataFrame
+----------------------------------------------------------------------------------------------------------------
+
+We can also create a temporary view on Stark DataFrame that was created
+on ORC file and run SQL queries.. These views are available until your
+program exits.
+
+```
+df2.createOrReplaceTempView("ORCTable")
+val orcSQL = spark.sql("select firstname,dob from ORCTable where salary >= 4000 ")
+orcSQL.show(false)
+```
+
+
+
+In this example, the physical table scan loads only
+columns **firstname**, **dob,** and age at runtime, without reading
+**all** columns from the file system. This improves read performance.
+
+Creating a table on ORC file
+----------------------------------------------------------------------------------------------------
+
+Now let's walk through executing SQL queries on the ORC file without
+creating a DataFrame first. In order to execute SQL queries, create a
+temporary view or table directly on the ORC file instead of creating
+from DataFrame.
+
+```
+spark.sql("CREATE TEMPORARY VIEW PERSON USING orc OPTIONS (path \"/tmp/orc/data.orc\")")
+spark.sql("SELECT * FROM PERSON").show()
+```
+
+
+
+Here, we created a temporary view `PERSON` from ORC file "`data`" file.
+This gives the following results.
+
+```
++---------+----------+--------+-----+------+------+
+|firstname|middlename|lastname|  dob|gender|salary|
++---------+----------+--------+-----+------+------+
+|  Robert |          |Williams|42114|     M|  4000|
+|   Maria |      Anne|   Jones|39192|     F|  4000|
+| Michael |      Rose|        |40288|     M|  4000|
+|   James |          |   Smith|36636|     M|  3000|
+|      Jen|      Mary|   Brown|     |     F|    -1|
++---------+----------+--------+-----+------+------+
+```
+
+
+
+Using Partition
+--------------------------------------------------------------------------
+
+When we execute a particular query on PERSON table, it scan's through
+all the rows and returns the results the selected columns back. In
+Spark, we can improve query execution in an optimized way by doing
+partitions on the data using `partitionBy()` method. Following is the
+example of partitionBy().
+
+```
+df.write.partitionBy("gender","salary")
+    .mode("overwrite").orc("/tmp/orc/data.orc")
+```
+
+
+
+When you check the people.orc file, it has two partitions "gender"
+followed by "salary" inside.
+
+### Reading a specific Partition
+
+The example below explains of reading partitioned ORC file into
+DataFrame with gender=M.
+
+```
+val parDF=spark.read.orc("/tmp/orc/data.orc/gender=M")
+parDF.show(false)
+```
+
+
+
+Which compression to choose
+--------------------------------------------------------------------------------------------------
+
+Not writing ORC files in compression results in larger disk space and
+slower in performance. Hence, it is suggestable to use compression.
+Below are basic comparison between ZLIB and SNAPPY when to use what.
+
+-   When you need a faster read then ZLIB compression is to-go option,
+    without a doubt, It also takes smaller storage on disk compared with
+    SNAPPY.
+-   ZLIB is slightly slower in write compared with SNAPPY. If you have
+    large data set to write, use SNAPPY. For smaller datasets, it is
+    still suggestible to use ZLIB.
+
+Complete Example of using ORC in Spark
+------------------------------------------------------------------------------------------------------------------------
+
+```
+import org.apache.spark.sql.{SparkSession}
+
+object ReadORCFile extends App{
+
+  val spark: SparkSession = SparkSession.builder()
+    .master("local[1]")
+    .appName("sparkexamples")
+    .getOrCreate()
+
+  val data =Seq(("James ","","Smith","36636","M",3000),
+  ("Michael ","Rose","","40288","M",4000),
+  ("Robert ","","Williams","42114","M",4000),
+  ("Maria ","Anne","Jones","39192","F",4000),
+  ("Jen","Mary","Brown","","F",-1))
+  val columns=Seq("firstname","middlename","lastname","dob","gender","salary")
+  val df=spark.createDataFrame(data).toDF(columns:_*)
+
+  df.write.mode("overwrite")
+    .orc("/tmp/orc/data.orc")
+
+  df.write.mode("overwrite")
+    .option("compression","none12")
+    .orc("/tmp/orc/data-nocomp.orc")
+
+  df.write.mode("overwrite")
+    .option("compression","zlib")
+    .orc("/tmp/orc/data-zlib.orc")
+
+  val df2=spark.read.orc("/tmp/orc/data.orc")
+  df2.show(false)
+
+  df2.createOrReplaceTempView("ORCTable")
+  val orcSQL = spark.sql("select firstname,dob from ORCTable where salary >= 4000 ")
+  orcSQL.show(false)
+
+  spark.sql("CREATE TEMPORARY VIEW PERSON USING orc OPTIONS (path \"/tmp/orc/data.orc\")")
+  spark.sql("SELECT * FROM PERSON").show()
 }
 ```
 
 
 
-If you use `scan 'employee'` on a shell, you will get the below 3 rows
-as an output.
+### Conclusion
 
-![Spark HBase
-Connector]
-
-Reading the table to DataFrame using "hbase-spark"
---------------------------------------------------
-
-In this example, I will explain how to read data from the HBase table,
-create a DataFrame and finally run some filters using DSL and SQL's.
-
-Below is a complete example and it is also available at
-[GitHub](https://github.com/sparkbyexamples/spark-hbase-connector-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/hbase/dataframe/HBaseSparkRead.scala).
-
-```
-package com.sparkbyexamples.spark.hbase.dataframe
-
-import org.apache.hadoop.hbase.spark.datasources.HBaseTableCatalog
-import org.apache.spark.sql.SparkSession
-
-object HBaseSparkRead {
-
-  def main(args: Array[String]): Unit = {
-
-    def catalog =
-      s"""{
-         |"table":{"namespace":"default", "name":"employee"},
-         |"rowkey":"key",
-         |"columns":{
-         |"key":{"cf":"rowkey", "col":"key", "type":"string"},
-         |"fName":{"cf":"person", "col":"firstName", "type":"string"},
-         |"lName":{"cf":"person", "col":"lastName", "type":"string"},
-         |"mName":{"cf":"person", "col":"middleName", "type":"string"},
-         |"addressLine":{"cf":"address", "col":"addressLine", "type":"string"},
-         |"city":{"cf":"address", "col":"city", "type":"string"},
-         |"state":{"cf":"address", "col":"state", "type":"string"},
-         |"zipCode":{"cf":"address", "col":"zipCode", "type":"string"}
-         |}
-         |}""".stripMargin
-
-    val spark: SparkSession = SparkSession.builder()
-      .master("local[1]")
-      .appName("sparkexamples")
-      .getOrCreate()
-
-    import spark.implicits._
-
-    // Reading from HBase to DataFrame
-    val hbaseDF = spark.read
-      .options(Map(HBaseTableCatalog.tableCatalog -> catalog))
-      .format("org.apache.spark.sql.execution.datasources.hbase")
-      .load()
-
-    //Display Schema from DataFrame
-    hbaseDF.printSchema()
-
-    //Collect and show Data from DataFrame
-    hbaseDF.show(false)
-
-    //Applying Filters
-    hbaseDF.filter($"key" === "1" && $"state" === "FL")
-      .select("key", "fName", "lName")
-      .show()
-
-    //Create Temporary Table on DataFrame
-    hbaseDF.createOrReplaceTempView("employeeTable")
-
-    //Run SQL
-    spark.sql("select * from employeeTable where fName = 'Amaya' ").show
-
-  }
-}
-```
-
-
-
-`hbaseDF.printSchema()` displays the below schema.
-
-```
-root
- |-- key: string (nullable = true)
- |-- fName: string (nullable = true)
- |-- lName: string (nullable = true)
- |-- mName: string (nullable = true)
- |-- addressLine: string (nullable = true)
- |-- city: string (nullable = true)
- |-- state: string (nullable = true)
- |-- zipCode: string (nullable = true)
-```
-
-
-
-`hbaseDF.show(false)` get the below data. Please note the DataFrame
-field names differences with table column cell names.
-
-```
-+---+-------+--------+-----+-----------+-------+-----+-------+
-|key|fName  |lName   |mName|addressLine|city   |state|zipCode|
-+---+-------+--------+-----+-----------+-------+-----+-------+
-|1  |Abby   |Smith   |K    |3456 main  |Orlando|FL   |45235  |
-|2  |Amaya  |Williams|L    |123 Orange |Newark |NJ   |27656  |
-|3  |Alchemy|Davis   |P    |Warners    |Sanjose|CA   |34789  |
-+---+-------+--------+-----+-----------+-------+-----+-------+
-```
-
-
-
-###### Conclusion
-
-In this tutorial, you have learned how the read from and write DataFrame
-rows to HBase table using Spark HBase connector and Datasource
- `"org.apache.spark.sql.execution.datasources.hbase"` with Scala
-example.
-
-This complete project with Maven dependencies and many more HBase
-examples are available at [GitHub "spark-hbase-connector-examples"
-project](https://github.com/sparkbyexamples/spark-hbase-connector-examples)
-
+In summary, ORC is a high efficient, compressed columnar format that is
+capable to store petabytes of data without compromising fast reads.
+Spark natively supports ORC data source to read and write an ORC files
+using orc() method on DataFrameReader and DataFrameWrite.

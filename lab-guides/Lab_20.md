@@ -1,197 +1,331 @@
 
-
-Convert Spark RDD to DataFrame \| Dataset
-=========================================
-
-
-While working in Apache Spark with Scala, we often need to **Convert
-Spark RDD to DataFrame** and Dataset as these provide more advantages
-over RDD. For instance, DataFrame is a distributed collection of data
-organized into named columns similar to Database tables and provides
-[optimization and performance
-improvement].
+Spark Read and Write JSON file into DataFrame
+=============================================
 
 
 
-In this article, I will explain how to **Convert Spark RDD to
-Dataframe** and Dataset using several examples.
 
--   [Create Spark
-    RDD]
--   [Convert Spark RDD to
-    DataFrame]
-    -   [using
-        toDF()]
-    -   [using
-        createDataFrame()]
-    -   [using RDD row type &
-        schema]
--   [Convert Spark RDD to
-    Dataset]
+1. Spark Read JSON File into DataFrame
+-----------------------------------------------------------------------------------------------------------------------
 
-Create Spark RDD
-----------------------------------------------------------------------------
+Using `spark.read.json("path")` or
+`spark.read.format("json").load("path")` you can read a JSON file into a
+Spark DataFrame, these methods take a file path as an argument. 
 
-First, let's create an RDD by passing Seq object to
-`sparkContext.parallelize()` function. We would need this "rdd" object
-for all our examples below.
+Unlike [reading a
+CSV],
+By default JSON data source inferschema from an input file.
 
 
+
+Refer dataset used in this article at [zipcodes.json on
+GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/main/resources/zipcodes.json)
 
 ```
-import spark.implicits._
-val columns = Seq("language","users_count")
-val data = Seq(("Java", "20000"), ("Python", "100000"), ("Scala", "3000"))
-val rdd = spark.sparkContext.parallelize(data)
+//read json file into dataframe
+val df = spark.read.json("src/main/resources/zipcodes.json")
+df.printSchema()
+df.show(false)
 ```
 
 
 
-Convert Spark RDD to DataFrame 
----------------------------------------------------------------------------------------------------------
+When you use` format("json")` method, you can also specify the Data
+sources by their fully qualified name (i.e.,
+`org.apache.spark.sql.json`), for built-in sources, you can also use
+short name "json". 
 
-Converting Spark RDD to DataFrame can be done using toDF(),
-createDataFrame() and transforming `rdd[Row]` to the data frame.
+2. Read JSON file from multiline
+-----------------------------------------------------------------------------------------------------------
 
-### Convert RDD to DataFrame -- Using toDF()
-
-Spark provides an implicit function `toDF()` which would be used to
-convert RDD, Seq\[T\], List\[T\] to DataFrame. In order to use toDF()
-function, we should import implicits first using
-`import spark.implicits._`.
-
-```
-val dfFromRDD1 = rdd.toDF()
-dfFromRDD1.printSchema()
-```
+Sometimes you may want to read records from JSON file that scattered
+multiple lines, In order to read such files, use-value true to
+[multiline]
+option, by default multiline option, is set to false.
 
 
 
-By default, toDF() function creates column names as "\_1" and "\_2" like
-Tuples. Outputs below schema.
 
 
+
+Below is the input file we going to read, this same file is also
+available at [multiline-zipcode.json on
+GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/main/resources/multiline-zipcode.json). 
 
 ```
-root
- |-- _1: string (nullable = true)
- |-- _2: string (nullable = true)
-```
-
-
-
-`toDF() `has another signature that takes arguments to define column
-names as shown below.
-
-```
-val dfFromRDD1 = rdd.toDF("language","users_count")
-dfFromRDD1.printSchema()
+[{
+  "RecordNumber": 2,
+  "Zipcode": 704,
+  "ZipCodeType": "STANDARD",
+  "City": "PASEO COSTA DEL SUR",
+  "State": "PR"
+},
+{
+  "RecordNumber": 10,
+  "Zipcode": 709,
+  "ZipCodeType": "STANDARD",
+  "City": "BDA SAN LUIS",
+  "State": "PR"
+}]
 ```
 
 
 
-Outputs below schema.
+Using `spark.read.option("multiline","true")`
 
 ```
-root
- |-- language: string (nullable = true)
- |-- users_count: string (nullable = true)
+//read multiline json file
+val multiline_df = spark.read.option("multiline","true")
+      .json("src/main/resources/multiline-zipcode.json")
+multiline_df.show(false)    
 ```
 
 
 
-By default, the datatype of these columns infers to the type of data and
-set's nullable to true. We can change this behavior by supplying
+3. Reading Multiple Files at a Time
+-----------------------------------------------------------------------------------------------------------------
+
+Using the `spark.read.json()` method you can also read multiple JSON
+files from different paths, just pass all file names with fully
+qualified paths by separating comma, for example
+
+```
+//read multiple files
+val df2 = spark.read.json(
+     "src/main/resources/zipcodes_streaming/zipcode1.json",
+     "src/main/resources/zipcodes_streaming/zipcode2.json")
+df2.show(false)
+```
+
+
+
+4. Reading all Files in a Directory
+-----------------------------------------------------------------------------------------------------------------
+
+We can read all JSON files from a directory into DataFrame just by
+passing directory as a path to the `json()` method. Below snippet,
+"[zipcodes\_streaming](https://github.com/fenago/spark-scala-examples/tree/master/src/main/resources/zipcodes_streaming)"
+is a folder that contains multiple JSON files.
+
+```
+//read all files from a folder
+val df3 = spark.read.json("src/main/resources/zipcodes_streaming")
+df3.show(false)
+```
+
+
+
+5. Reading files with a user-specified custom schema
+---------------------------------------------------------------------------------------------------------------------------------------------------
+
+Spark Schema defines the structure of the data, in other words, it is
+the structure of the DataFrame. Spark SQL provides StructType &
+StructField classes to programmatically specify the structure to the
+DataFrame.
+
+If you know the
 [schema]
-using
-[StructType]
--- where we can specify a column name, data type and nullable for each
-field/column.
+of the file ahead and do not want to use the default `inferSchema`
+option for column names and types, use user-defined custom column names
+and type using schema option.
+
+Use the [StructType class to create a custom
+schema],
+below we initiate this class and use add a method to add columns to it
+by providing the column name, data type and nullable option.
+
+```
+//Define custom schema
+val schema = new StructType()
+      .add("RecordNumber",IntegerType,true)
+      .add("Zipcode",IntegerType,true)
+      .add("ZipCodeType",StringType,true)
+      .add("City",StringType,true)
+      .add("State",StringType,true)
+      .add("LocationType",StringType,true)
+      .add("Lat",DoubleType,true)
+      .add("Long",DoubleType,true)
+      .add("Xaxis",IntegerType,true)
+      .add("Yaxis",DoubleType,true)
+      .add("Zaxis",DoubleType,true)
+      .add("WorldRegion",StringType,true)
+      .add("Country",StringType,true)
+      .add("LocationText",StringType,true)
+      .add("Location",StringType,true)
+      .add("Decommisioned",BooleanType,true)
+      .add("TaxReturnsFiled",StringType,true)
+      .add("EstimatedPopulation",IntegerType,true)
+      .add("TotalWages",IntegerType,true)
+      .add("Notes",StringType,true)
+val df_with_schema = spark.read.schema(schema)
+        .json("src/main/resources/zipcodes.json")
+df_with_schema.printSchema()
+df_with_schema.show(false)
+```
 
 
 
+6. Read JSON file using Spark SQL
+-------------------------------------------------------------------------------------------------------------
+
+Spark SQL also provides a way to read a JSON file by creating a
+temporary view directly from reading file using
+spark.sqlContext.sql("load json to temporary view")
+
+```
+spark.sqlContext.sql("CREATE TEMPORARY VIEW zipcode USING json OPTIONS" + 
+      " (path 'src/main/resources/zipcodes.json')")
+spark.sqlContext.sql("select * from zipcodes").show(false)
+```
 
 
 
-### Convert RDD to DataFrame -- Using createDataFrame() 
+7. Options while reading JSON file
+---------------------------------------------------------------------------------------------------------------
 
-`SparkSession `class provides [`createDataFrame()` method to create
+### 7.1 nullValues
+
+Using `nullValues` option you can specify the string in a JSON to
+consider as null. For example, if you want to consider a date column
+with a value "1900-01-01" set null on DataFrame.
+
+### 7.2 dateFormat
+
+`dateFormat` option to used to set the format of the input [DateType and
+TimestampType]
+columns. Supports all
+[java.text.SimpleDateFormat](https://docs.oracle.com/javase/10/docs/api/java/time/format/DateTimeFormatter.html)
+formats.
+
+**Note:** Besides the above options, Spark JSON dataset also supports
+many other options.
+
+8. Applying DataFrame Transformations
+---------------------------------------------------------------------------------------------------------------------
+
+Once you have [created
 DataFrame]
-and it takes rdd object as an argument. and chain it with toDF() to
-specify names to the columns.
+from the JSON file, you can apply all transformation and actions
+DataFrame support. Please refer to the link for more details. 
+
+9. Write Spark DataFrame to JSON file
+---------------------------------------------------------------------------------------------------------------------
+
+Use the Spark DataFrameWriter object "write" method on DataFrame to
+write a JSON file. 
 
 ```
-val columns = Seq("language","users_count")
-val dfFromRDD2 = spark.createDataFrame(rdd).toDF(columns:_*)
-```
-
-
-
-Here, we are using scala operator `<strong>:_*</strong>` to explode
-columns array to comma-separated values.
-
-### Using RDD Row type RDD\[Row\] to DataFrame
-
-Spark `createDataFrame()` has another signature which takes the
-RDD\[Row\] type and schema for column names as arguments. To use this
-first, we need to convert our "rdd" object from RDD\[T\] to RDD\[Row\].
-To define a schema, we use StructType that takes an array of
-StructField. And StructField takes column name, data type and
-nullable/not as arguments.
-
-```
-    //From RDD (USING createDataFrame and Adding schema using StructType)
-    val schema = StructType(columns
-      .map(fieldName => StructField(fieldName, StringType, nullable = true)))
-    //convert RDD[T] to RDD[Row]
-    val rowRDD = rdd.map(attributes => Row(attributes._1, attributes._2))
-    val dfFromRDD3 = spark.createDataFrame(rowRDD,schema)
+df2.write
+ .json("/tmp/spark_output/zipcodes.json")
 ```
 
 
 
-This creates a data frame from RDD and assigns column names using
-schema.
+### 9.1 Spark Options while writing JSON files
 
-Convert Spark RDD to Dataset
-----------------------------------------------------------------------------------------------------
+While writing a JSON file you can use several options.  
 
-The DataFrame API is radically different from the RDD API because it is
-an API for building a relational query plan that Spark's Catalyst
-optimizer can then execute.
+Other options available `nullValue`,`dateFormat`
 
-The [Dataset
-API](https://databricks.com/spark/getting-started-with-apache-spark/datasets)
-aims to provide the best of both worlds: the familiar object-oriented
-programming style and compile-time type-safety of the RDD API but with
-the performance benefits of the Catalyst query optimizer. Datasets also
-use the same efficient off-heap storage mechanism as the DataFrame API.
+### 9.2 Saving modes
 
-DataFrame is an alias to *Dataset\[Row\]*. As we mentioned before,
-Datasets are optimized for typed engineering tasks, for which you want
-types checking and object-oriented programming interface, while
-DataFrames are faster for interactive analytics and close to SQL style.
+Spark DataFrameWriter also has a method mode() to specify SaveMode; the
+argument to this method either takes below string or a constant from
+`SaveMode` class.
 
-About data serializing. The Dataset API has the concept
-of [encoders](https://databricks.com/blog/2016/01/04/introducing-apache-spark-datasets.html) which
-translate between JVM representations (objects) and Spark's internal
-binary format. Spark has built-in encoders that are very advanced in
-that they generate byte code to interact with off-heap data and provide
-on-demand access to individual attributes without having to de-serialize
-an entire object.
+overwrite -- mode is used to overwrite the existing file, alternatively,
+you can use `SaveMode.Overwrite`.
+
+append -- To add the data to the existing file, alternatively, you can
+use `SaveMode.Append`.
+
+ignore -- Ignores write operation when the file already exists,
+alternatively you can use `SaveMode.Ignore`.
+
+errorifexists or error -- This is a default option when the file already
+exists, it returns an error, alternatively, you can use
+`SaveMode.ErrorIfExists`.
 
 ```
-val ds = spark.createDataset(rdd)
+df2.write.mode(SaveMode.Overwrite).json("/tmp/spark_output/zipcodes.json")
 ```
 
 
 
-The complete code can be downloaded
-from [GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/dataframe/CreateDataFrame.scala)
+10. Source Code for Reference
+-----------------------------------------------------------------------------------------------------
+
+```
+package com.sparkbyexamples.spark.dataframe
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types._
+object FromJsonFile {
+  def main(args:Array[String]): Unit = {
+    val spark: SparkSession = SparkSession.builder()
+      .master("local[3]")
+      .appName("SparkByExample")
+      .getOrCreate()
+    val sc = spark.sparkContext
+    //read json file into dataframe
+    val df = spark.read.json("src/main/resources/zipcodes.json")
+    df.printSchema()
+    df.show(false)
+    //read multiline json file
+    val multiline_df = spark.read.option("multiline", "true")
+      .json("src/main/resources/multiline-zipcode.json")
+    multiline_df.printSchema()
+    multiline_df.show(false)
+    //read multiple files
+    val df2 = spark.read.json(
+      "src/main/resources/zipcodes_streaming/zipcode1.json",
+      "src/main/resources/zipcodes_streaming/zipcode2.json")
+    df2.show(false)
+    //read all files from a folder
+    val df3 = spark.read.json("src/main/resources/zipcodes_streaming/*")
+    df3.show(false)
+    //Define custom schema
+    val schema = new StructType()
+      .add("City", StringType, true)
+      .add("Country", StringType, true)
+      .add("Decommisioned", BooleanType, true)
+      .add("EstimatedPopulation", LongType, true)
+      .add("Lat", DoubleType, true)
+      .add("Location", StringType, true)
+      .add("LocationText", StringType, true)
+      .add("LocationType", StringType, true)
+      .add("Long", DoubleType, true)
+      .add("Notes", StringType, true)
+      .add("RecordNumber", LongType, true)
+      .add("State", StringType, true)
+      .add("TaxReturnsFiled", LongType, true)
+      .add("TotalWages", LongType, true)
+      .add("WorldRegion", StringType, true)
+      .add("Xaxis", DoubleType, true)
+      .add("Yaxis", DoubleType, true)
+      .add("Zaxis", DoubleType, true)
+      .add("Zipcode", StringType, true)
+      .add("ZipCodeType", StringType, true)
+    val df_with_schema = spark.read.schema(schema)
+        .json("src/main/resources/zipcodes.json")
+    df_with_schema.printSchema()
+    df_with_schema.show(false)
+    spark.sqlContext.sql("CREATE TEMPORARY VIEW zipcode USING json OPTIONS" +
+      " (path 'src/main/resources/zipcodes.json')")
+    spark.sqlContext.sql("SELECT *FROM zipcode").show()
+    //Write json file
+    df2.write
+      .json("/tmp/spark_output/zipcodes.json")
+  }
+}
+```
+
+
 
 Conclusion:
 -----------
 
-In this article, you have learned how to convert Spark RDD to DataFrame
-and Dataset, we would need these frequently while working in Spark as
-these provides optimization and performance over RDD.
+In this tutorial, you have learned how to read a JSON file with single
+line record and multiline record into Spark DataFrame, and also learned
+reading single and multiple files at a time and writing JSON file back
+to DataFrame using different save options.
+

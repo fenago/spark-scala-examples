@@ -1,245 +1,213 @@
 
 
-Spark Read XML file using Databricks API
-========================================
+Using Avro Data Files From Spark SQL 2.3.x or earlier
+=====================================================
 
 
 
-Apache Spark can also be used to process or read simple to complex
-nested XML files into Spark DataFrame and writing it back to XML using
-Databricks [Spark XML API](https://github.com/databricks/spark-xml)
-(spark-xml) library. In this article, I will explain how to read XML
-file with several options using the Scala example.
+
+**Version:** Apache Spark 2.3.x or earlier
+
+If you are using Spark2.4 or later then please use the following URL.
 
 
-Databricks Spark-XML Maven dependency
-----------------------------------------------------------------------------------------------------------------------
 
-Processing XML files in Apache Spark is enabled by using below
-Databricks spark-xml dependency into the maven pom.xml file.
+[Using Avro Data Files From Spark SQL 2.4.x and
+later]
+
+On this post, we will see several examples or usages of accessing Spark
+Avro file format using Spark 2.3 or earlier. Spark SQL supports loading
+and saving DataFrames from and to a Avro data files by using
+[spark-avro](https://github.com/databricks/spark-avro/blob/branch-4.0/README-for-old-spark-versions.md)
+library. spark-avro originally developed by databricks as a open source
+library which supports reading and writing data in Avro file format.
+
+
+
+[Apache Avro](https://avro.apache.org/docs/current/) is a data
+serialization system, it is mostly used in Apache Spark especially for
+Kafka-based data pipelines. When Avro data is stored in a file, its
+schema is stored with it, so that files may be processed later by any
+program.
+
+Continue reading:
+
+-   **Writing to Avro Data Files**
+-   **Reading from Avro Data Files**
+-   **Writing Partition Data**
+-   **Reading Partition data**
+-   **Using Avro Schema**
+-   **Using Spark SQL**
+-   **Writing Compressed Data Files**
+
+Accessing Avro file format in Spark is enabled by using below Maven
+dependencies.
+
+
 
 ```
 <dependency>
-     <groupId>com.databricks</groupId>
-     <artifactId>spark-xml_2.11</artifactId>
-     <version>0.6.0</version>
- </dependency>
-```
-
-Spark Read XML into DataFrame
-------------------------------------------------------------------------------------------------------
-
-Databricks Spark-XML package allows us to read simple or nested XML
-files into DataFrame, once DataFrame is created, we can leverage its
-APIs to perform transformations and actions like any other DataFrame.
-
-
-
-Spark-XML API accepts several options while reading an XML file. for
-example, option `rowTag `is used to specify the rows tag. `rootTag` is
-used to specify the root tag of the input nested XML
-
-Input XML file we use on this example is available at
-[GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-sql-examples/src/main/resources/persons.xml)
-repository.
-
-```
-val df = spark.read
-      .format("com.databricks.spark.xml")
-      .option("rowTag", "person")
-      .xml("src/main/resources/persons.xml")
-```
-
-
-
-Alternatively, you can also use the short form `format("xml")` and
-`load("src/main/resources/persons.xml")`
-
-
-
-While API reads XML file into DataFrame, It automatically infers the
-schema based on data. Below schema ouputs from `df.printSchma()` .
-
-
-```
-root
- |-- _id: long (nullable = true)
- |-- dob_month: long (nullable = true)
- |-- dob_year: long (nullable = true)
- |-- firstname: string (nullable = true)
- |-- gender: string (nullable = true)
- |-- lastname: string (nullable = true)
- |-- middlename: string (nullable = true)
- |-- salary: struct (nullable = true)
- |    |-- _VALUE: long (nullable = true)
- |    |-- _currency: string (nullable = true)
-```
-
-
-
-We can also supply our own struct schema and use it while reading a file
-as described below.
-
-```
- val schema = new StructType()
-      .add("_id",StringType)
-      .add("firstname",StringType)
-      .add("middlename",StringType)
-      .add("lastname",StringType)
-      .add("dob_year",StringType)
-      .add("dob_month",StringType)
-      .add("gender",StringType)
-      .add("salary",StringType)
-val df = spark.read
-  .option("rowTag", "book")
-  .schema(schema)
-  .xml("src/main/resources/persons.xml")
-df.show()
-```
-
-
-
-Output:
-
-
-
-
-
-
-`show()` on DataFrame outputs the following.
-
-
-```
-+---+---------+--------+---------+------+--------+----------+---------------+
-|_id|dob_month|dob_year|firstname|gender|lastname|middlename|         salary|
-+---+---------+--------+---------+------+--------+----------+---------------+
-|  1|        1|    1980|    James|     M|   Smith|      null|  [10000, Euro]|
-|  2|        6|    1990|  Michael|     M|    null|      Rose|[10000, Dollor]|
-+---+---------+--------+---------+------+--------+----------+---------------+
-```
-
-
-
-#### Handling XML Attributes
-
-"\_" is added to the variable prefix for attributes, for example,
-\_value & \_currency are attributes from XML file. We can change the
-prefix to be any special character by using the option `attributePrefix`
-. Handling attributes can be disabled with the option `excludeAttribute`
-
-Spark Write DataFrame to XML File
---------------------------------------------------------------------------------------------------------------
-
-Use "com.databricks.spark.xml" DataSource on format method of the
-DataFrameWriter to write Spark DataFrame to XML file. This data source
-is provided as part of the Spark-XML API. simar to reading, write also
-takes options rootTag and rowTag to specify the root tag and row tag
-respectively on the output XML file.
-
-```
-df2.write
-      .format("com.databricks.spark.xml")
-      .option("rootTag", "persons")
-      .option("rowTag", "person")
-      .save("src/main/resources/persons_new.xml")
-```
-
-
-
-This snippet writes a Spark DataFrame "df2" to XML file
-"pesons\_new.xml" with "persons" as root tag and "person" as row tag.
-
-### Limitations:
-
-This API is most useful when reading and writing simple XML files.
-However, At the time of writing this article, this API has the following
-limitations.
-
--   Reading/Writing attribute to/from root element not supported in this
-    API.
--   Doesn't support complex XML structures where you want to read header
-    and footer along with row elements.
-
-If you have one root element following data elements then Spark XML is
-GO to API. If you wanted to write a complex structure and this API is
-not suitable for you, please read below article where I've explained
-using XStream API
-
-[Spark -- Writing complex XML structures using XStream
-API]
-
-Write Spark XML DataFrame to Avro File
-------------------------------------------------------------------------------------------------------------------------
-
-Once you create a DataFrame by reading XML, We can easily write it to
-Avro by using below maven dependency.
-
-Apache Avro is a serialization system and is used to store persistent
-data in a binary format. When Avro data is stored in a file, its schema
-is stored with it, so that files may be processed later by any program.
-
-```
-<dependency>
-    <groupId>org.apache.spark</groupId>
-    <artifactId>spark-avro_2.11</artifactId>
-    <version>2.4.0</version>
+     <groupId>org.apache.spark</groupId>
+     <artifactId>spark-sql_2.11</artifactId>
+     <version>2.3.0</version>
 </dependency>
 ```
 
-`format("avro")` is provided by spark-avro API to read/write Avro files.
-
 ```
-df2.write.format("avro")
-      .mode(SaveMode.Overwrite)
-      .save("\tmp\spark_out\avro\persons.avro")
-```
-
-
-
-Below snippet provides writing to Avro file by using partitions.
-
-```
-df2.write.partitionBy("_id")
-        .format("avro").save("persons_partition.avro")
+<dependency>
+    <groupId>com.databricks</groupId>
+    <artifactId>spark-avro_2.11</artifactId>
+    <version>4.0.0</version>
+</dependency>
 ```
 
+The spark-avro library includes `avro` method for reading and writing
+Avro files, but this is only available with import
+`import com.databricks.spark.avro._ `
 
-
-Write Spark XML DataFrame to Parquet File
-------------------------------------------------------------------------------------------------------------------------------
-
-Spark SQL provides a `parquet` method to read/write parquet files hence,
-no additional libraries are not needed, once the DatraFrame created from
-XML we can use the parquet method on DataFrameWriter class to write to
-the Parquet file.
-
-Apache Parquet is a columnar file format that provides optimizations to
-speed up queries and is a far more efficient file format than CSV or
-JSON. Spark SQL comes with a `parquet ` method to read data. It
-automatically captures the schema of the original data and reduces data
-storage by 75% on average.
+#### 1. Writing Avro Data File
 
 ```
-df2.write
-      .parquet("\tmp\spark_output\parquet\persons.parquet")
+import com.databricks.spark.avro._
+df.write.avro("person.avro")
 ```
 
 
 
-Below snippet, writes DataFrame to parquet file with partition by
-"\_id".
+Alternatively you can also specify by using `format`.
 
 ```
-df2.write
-      .partitionBy("_id")
-      .parquet("\tmp\spark_output\parquet\persons_partition.parquet")
+df.write.format("com.databricks.spark.avro")
+  .save("person.avro")
 ```
 
 
 
-#### Conclusion:
+#### 2. Reading Avro Data File
 
-In this article, you have learned how to read XML files into Apache
-Spark DataFrame and write it back to XML, Avro, and Parquet files after
-processing using spark xml API. Also, explains some limitations of using
-Databricks Spark-XML API.
+```
+import com.databricks.spark.avro._
+val readDF = spark.read.avro("person.avro")
+```
+
+
+
+Alternatively you can also specify by using `format`.
+
+```
+val readDF = spark.read
+      .format("com.databricks.spark.avro")
+      .load("person.avro")
+```
+
+
+
+#### 3. Writing Partition Data
+
+Let's see how to write and read partitioned data. Partition improves
+performance on reading by reducing Disk I/O.
+
+```
+val data = Seq(("James ","","Smith",2018,1,"M",3000),
+      ("Michael ","Rose","",2010,3,"M",4000),
+      ("Robert ","","Williams",2010,3,"M",4000),
+      ("Maria ","Anne","Jones",2005,5,"F",4000),
+      ("Jen","Mary","Brown",2010,7,"",-1)
+    )
+
+val columns = Seq("firstname", "middlename", "lastname", "dob_year",
+ "dob_month", "gender", "salary")
+import spark.sqlContext.implicits._
+val df = data.toDF(columns:_*)
+
+df.write.partitionBy("dob_year","dob_month")
+        .avro("person_partition.avro")
+```
+
+
+
+creates partition by date of birth year and month on person data .
+
+![](./images/spark-avro.jpg)
+
+#### 4. Reading Partition Data
+
+```
+spark.read
+      .avro("person_partition.avro")
+      .where(col("dob_year") === 2010)
+      .show()
+```
+
+
+
+Filtering on partition data just retrieves the specific partition
+instead of reading entire file and then filtering. This reduces disk I/O
+and improves performance on read.
+
+#### 5. Using Avro Schema
+
+Define avro schema in person.avsc file.
+
+
+```
+{
+  "type": "record",
+  "name": "Person",
+  "namespace": "com.sparkbyexamples",
+  "fields": [
+    {"name": "firstname","type": "string"},
+    {"name": "middlename","type": "string"},
+    {"name": "lastname","type": "string"},
+    {"name": "dob_year","type": "int"},
+    {"name": "dob_month","type": "int"},
+    {"name": "gender","type": "string"},
+    {"name": "salary","type": "int"}
+  ]
+}
+```
+
+
+
+Specify this schema using `option` while reading Avro file. You can
+download Avro schema example from
+[GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark2.3-avro-examples/src/main/scala/com/sparkbyexamples/spark/dataframe/avro/AvroUsingDataBricks.scala)
+
+```
+val schemaAvro = new Schema.Parser()
+      .parse(new File("src/main/resources/person.avsc"))
+
+val df = spark.read
+              .format("com.databricks.spark.avro")
+              .option("avroSchema", schemaAvro.toString)
+              .load("person.avro")
+```
+
+
+
+Alternatively we can also specify "StructType" schema using `schema`
+method.
+
+#### 6. Using Spark SQL
+
+We can also read an Avro data files using Spark SQL. To do this, first
+create a temporary table by pointing to Avro data file and run SQL
+command on this table.
+
+```
+spark.sqlContext.sql("CREATE TEMPORARY VIEW PERSON USING com.databricks.spark.avro OPTIONS (path \"person.avro\")")
+spark.sqlContext.sql("SELECT * FROM PERSON").show()
+```
+
+
+
+The complete Spark Avro Example using spark-avro library can be
+downloaded from
+[GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark2.3-avro-examples/src/main/scala/com/sparkbyexamples/spark/dataframe/avro/AvroUsingDataBricks.scala)
+
+#### **Conclusion:**
+
+We have seen examples on how to write an Avro data files and how to read
+an Avro data files using Spark. Also, explained usage of Avro schema and
+working with Avro partition; Using Partition we can achieve the
+significant performance on read.

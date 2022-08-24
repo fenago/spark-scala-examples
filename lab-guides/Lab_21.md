@@ -1,309 +1,258 @@
 
 
-Spark Read CSV file into DataFrame
-==================================
+Spark Read and Write Apache Parquet
+===================================
+
+
+Apache Parquet Introduction
+--------------------------------------------------------------------------------------------------
+
+[Apache Parquet](https://parquet.apache.org/) is a columnar file format
+that provides optimizations to speed up queries and is a far more
+efficient file format than CSV or JSON, supported by many data
+processing systems.
+
+It is compatible with most of the data processing frameworks in
+the [Hadoop](https://en.wikipedia.org/wiki/Hadoop) echo systems. It
+provides efficient data compression and encoding schemes with enhanced
+performance to handle complex data in bulk.
 
 
 
-Spark SQL provides `spark.read.csv("path")` to read a CSV file into
-Spark DataFrame and `dataframe.write.csv("path")` to save or write to
-the CSV file. Spark supports reading pipe, comma, tab, or any other
-delimiter/seperator files.
+Spark SQL provides support for both reading and writing Parquet files
+that automatically capture the schema of the original data, It also
+reduces data storage by 75% on average. Below are some advantages of
+storing data in a parquet format. Spark by default supports Parquet in
+its library hence we don't need to add any dependency libraries.
+
+Apache Parquet Advantages:
+-----------------------------------------------------------------------------------------------
+
+Below are some of the advantages of using Apache Parquet. combining
+these benefits with Spark improves performance and gives the ability to
+work with structure files.
+
+-   **Reduces IO operations.**
+-   **Fetches specific columns that you need to access.**
+-   **It consumes less space.**
+-   **Support type-specific encoding.**
+
+Apache Parquet Spark Example
+----------------------------------------------------------------------------------------------------
+
+Before we go over the Apache parquet with the Spark example, first,
+let's [Create a Spark
+DataFrame]
+from `Seq` object. Note that
+[toDF()]
+function on sequence object is available only when you import implicits
+using `spark.sqlContext.implicits._`. This complete spark parquet
+example is available at
+[Github](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-sql-examples/src/main/scala/com/sparkbyexamples/spark/dataframe/ParquetExample.scala)
+repository for reference.
 
 
-
-In this tutorial, you will learn how to read a single file, multiple
-files, all files from a local directory into DataFrame, and applying
-some transformations finally writing DataFrame back to CSV file using
-Scala.
-
-**Note:** Spark out of the box supports to read files in
-[CSV],
-[JSON],
-[TEXT],
-Parquet, and many more file formats into Spark DataFrame. 
-
-
-
-Spark Read CSV file into DataFrame
-----------------------------------------------------------------------------------------------------------------
-
-Using `spark.read.csv("path")` or
-`spark.read.format("csv").load("path")` you can read a CSV file with
-fields delimited by pipe, comma, tab (and many more) into a Spark
-DataFrame, These methods take a file path to read from as an argument.
-You can find the [zipcodes.csv at
-GitHub](https://github.com/fenago/spark-scala-examples/blob/3ea16e4c6c1614609c2bd7ebdffcee01c0fe6017/src/main/resources/zipcodes.csv)
 
 ```
- 
-val df = spark.read.csv("src/main/resources/zipcodes.csv")
-    df.printSchema()
-```
+val data = Seq(("James ","","Smith","36636","M",3000),
+              ("Michael ","Rose","","40288","M",4000),
+              ("Robert ","","Williams","42114","M",4000),
+              ("Maria ","Anne","Jones","39192","F",4000),
+              ("Jen","Mary","Brown","","F",-1))
 
+val columns = Seq("firstname","middlename","lastname","dob","gender","salary")
 
-
-This example reads the data into DataFrame columns "\_c0" for the first
-column and "\_c1" for second and so on. and by default type of all these
-columns would be String.
-
-
-
-```
- 
-root
- |-- _c0: string (nullable = true)
- |-- _c1: string (nullable = true)
- |-- _c2: string (nullable = true)
-```
-
-
-
-If you have a header with column names on file, you need to explicitly
-specify `true` for header option using `option("header",true)` not
-mentioning this, the API treats the header as a data record.
-
-```
- 
-val df = spark.read.option("header",true)
-   .csv("src/main/resources/zipcodes.csv")
+import spark.sqlContext.implicits._
+val df = data.toDF(columns:_*)
 ```
 
 
 
-It also reads all columns as a string
-([StringType])
-by default. I will explain in later sections how to read the
-[schema]
-(`inferschema`) from the header record and derive the [column
-type]
-based on the data.
+The above example creates a data frame with columns "firstname",
+"middlename", "lastname", "dob", "gender", "salary"
 
-When you use `format("csv")` method, you can also specify the Data
-sources by their fully qualified name
-(i.e., `org.apache.spark.sql.csv`), but for built-in sources, you can
-also use their short names (`csv`,`json`, `parquet`, `jdbc`, `text`
-e.t.c). 
+### Spark Write DataFrame to Parquet file format
 
-
-
-
-
-
-### Read multiple CSV files
-
-Using the `spark.read.csv()` method you can also read multiple CSV
-files, just pass all file names by separating comma as a path, for
-example : 
+Using `parquet()` function of `DataFrameWriter` class, we can write
+Spark DataFrame to the Parquet file. As mentioned earlier Spark doesn't
+need any additional packages or libraries to use Parquet as it by
+default provides with Spark. easy isn't it? so we don't have to worry
+about version and compatibility issues. In this example, we are writing
+DataFrame to "people.parquet" file.
 
 ```
- 
-val df = spark.read.csv("path1,path2,path3")
+df.write.parquet("/tmp/output/people.parquet")
 ```
 
 
 
-#### Read all CSV files in a directory
+Writing Spark DataFrame to Parquet format preserves the column names and
+data types, and all columns are automatically converted to be nullable
+for compatibility reasons. Notice that all part files Spark creates has
+parquet extension.
 
- We can read all CSV files from a directory into DataFrame just by
-passing the directory as a path to the `csv()` method.
+
+
+
+
+
+![](./images/parquet1.jpg)
+
+### Spark Read Parquet file into DataFrame
+
+Similar to write, DataFrameReader provides parquet() function
+(spark.read.parquet) to read the parquet files and creates a Spark
+DataFrame. In this example snippet, we are reading data from an apache
+parquet file we have written before.
 
 ```
- 
-val df = spark.read.csv("Folder path")
+val parqDF = spark.read.parquet("/tmp/output/people.parquet")
 ```
 
 
 
-Options while reading CSV file
+printing schema of DataFrame returns columns with the same names and
+data types.
+
+### Append to existing Parquet file
+
+Spark provides the capability to append DataFrame to existing parquet
+files using "append" save mode. In case, if you want to overwrite use
+"overwrite" save mode.
+
+```
+df.write.mode('append').parquet("/tmp/output/people.parquet")
+```
+
+
+
+### Using SQL queries on Parquet
+
+We can also create a temporary view on Parquet files and then use it in
+Spark SQL statements. This temporary table would be available until the
+SparkContext present.
+
+```
+parqDF.createOrReplaceTempView("ParquetTable")
+val parkSQL = spark.sql("select * from ParquetTable where salary >= 4000 ")
+```
+
+
+
+Above predicate on spark parquet file does the file scan which is
+performance bottleneck like table scan on a traditional database. We
+should use partitioning in order to improve performance.
+
+Spark parquet partition -- Improving performance
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+Partitioning is a feature of many databases and data processing
+frameworks and it is key to make jobs work at scale. We can do a parquet
+file partition using spark `partitionBy()` function.
+
+```
+df.write.partitionBy("gender","salary")
+        .parquet("/tmp/output/people2.parquet")
+```
+
+
+
+Parquet Partition creates a folder hierarchy for each spark partition;
+we have mentioned the first partition as gender followed by salary
+hence, it creates a salary folder inside the gender folder.
+
+![](./images/parquet2.jpg)
+
+This is an example of how to write a Spark DataFrame by preserving the
+partitioning on gender and salary columns.
+
+```
+val parqDF = spark.read.parquet("/tmp/output/people2.parquet")
+parqDF.createOrReplaceTempView("Table2")
+val df = spark.sql("select * from Table2  where gender='M' and salary >= 4000")
+```
+
+
+
+The execution of this query is [significantly faster than the query
+without
+partition].
+It filters the data first on gender and then applies filters on salary.
+
+Spark Read a specific Parquet partition
+--------------------------------------------------------------------------------------------------------------------------
+
+```
+val parqDF = spark.read.parquet("/tmp/output/people2.parquet/gender=M")
+```
+
+
+
+This code snippet retrieves the data from the gender partition value
+"M".
+
+The complete code can be downloaded
+from [GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-sql-examples/src/main/scala/com/sparkbyexamples/spark/dataframe/ParquetExample.scala)
+
+Complete Spark Parquet Example
 --------------------------------------------------------------------------------------------------------
 
-Spark CSV dataset provides multiple options to work with CSV files.
-Below are some of the most important options explained with examples.
-
-### delimiter
-
-`delimiter` option is used to specify the column delimiter of the CSV
-file. By default, it is comma (,) character, but can be set to pipe
-(\|), tab, space, or any character using this option.
-
 ```
- 
-val df2 = spark.read.options(Map("delimiter"->","))
-  .csv("src/main/resources/zipcodes.csv")
-```
+package com.sparkbyexamples.spark.dataframe
 
+import org.apache.spark.sql.SparkSession
 
+object ParquetExample {
 
-### inferSchema
+  def main(args:Array[String]):Unit= {
 
-The default value set to this option is `false` when setting to `true`
-it automatically infers column types based on the data. Note that, it
-requires reading the data one more time to infer the
-[schema].
+    val spark: SparkSession = SparkSession.builder()
+      .master("local[1]")
+      .appName("sparkexamples")
+      .getOrCreate()
 
-```
- 
-val df2 = spark.read.options(Map("inferSchema"->"true","delimiter"->","))
-  .csv("src/main/resources/zipcodes.csv")
-```
+    val data = Seq(("James ","","Smith","36636","M",3000),
+                 ("Michael ","Rose","","40288","M",4000),
+                 ("Robert ","","Williams","42114","M",4000),
+                 ("Maria ","Anne","Jones","39192","F",4000),
+                 ("Jen","Mary","Brown","","F",-1))
 
-
-
-### header
-
-This option is used to read the first line of the CSV file as column
-names. By default the value of this option is `false` , and all column
-types are assumed to be a string.
-
-```
- 
-val df2 = spark.read.options(Map("inferSchema"->"true","delimiter"->",","header"->"true"))
-  .csv("src/main/resources/zipcodes.csv")
-```
-
-
-
-### quotes
-
-When you have a column with a delimiter that used to split the columns,
-use `quotes` option to specify the quote character, by default it is "
-and delimiters inside quotes are ignored. but using this option you can
-set any character.
-
-### nullValues
-
-Using `nullValues` option you can specify the string in a CSV to
-consider as null. For example, if you want to consider a date column
-with a value "1900-01-01" set null on DataFrame.
-
-### dateFormat
-
-`dateFormat` option to used to set the format of the input [DateType and
-TimestampType]
-columns. Supports all
-[java.text.SimpleDateFormat](https://docs.oracle.com/javase/10/docs/api/java/time/format/DateTimeFormatter.html)
-formats.
-
-**Note:** Besides the above options, Spark CSV dataset also supports
-many other options, [please refer to this article for
-details](https://docs.databricks.com/data/data-sources/read-csv.html).
-
-Reading CSV files with a user-specified custom schema
-------------------------------------------------------------------------------------------------------------------------------------------------------
-
-If you know the
-[schema]
-of the file ahead and do not want to use the `inferSchema` option for
-column names and types, use user-defined custom column names and type
-using `schema` option.
-
-```
- 
-val schema = new StructType()
-      .add("RecordNumber",IntegerType,true)
-      .add("Zipcode",IntegerType,true)
-      .add("ZipCodeType",StringType,true)
-      .add("City",StringType,true)
-      .add("State",StringType,true)
-      .add("LocationType",StringType,true)
-      .add("Lat",DoubleType,true)
-      .add("Long",DoubleType,true)
-      .add("Xaxis",IntegerType,true)
-      .add("Yaxis",DoubleType,true)
-      .add("Zaxis",DoubleType,true)
-      .add("WorldRegion",StringType,true)
-      .add("Country",StringType,true)
-      .add("LocationText",StringType,true)
-      .add("Location",StringType,true)
-      .add("Decommisioned",BooleanType,true)
-      .add("TaxReturnsFiled",StringType,true)
-      .add("EstimatedPopulation",IntegerType,true)
-      .add("TotalWages",IntegerType,true)
-      .add("Notes",StringType,true)
-val df_with_schema = spark.read.format("csv")
-      .option("header", "true")
-      .schema(schema)
-      .load("src/main/resources/zipcodes.csv")
-df_with_schema.printSchema()
-df_with_schema.show(false)
+    val columns = Seq("firstname","middlename","lastname","dob","gender","salary")
+    import spark.sqlContext.implicits._
+    val df = data.toDF(columns:_*)
+    df.show()
+    df.printSchema()
+    df.write
+      .parquet("/tmp/output/people.parquet")
+    val parqDF = spark.read.parquet("/tmp/output/people.parquet")
+    parqDF.createOrReplaceTempView("ParquetTable")
+    spark.sql("select * from ParquetTable where salary >= 4000").explain()
+    val parkSQL = spark.sql("select * from ParquetTable where salary >= 4000 ")
+    parkSQL.show()
+    parkSQL.printSchema()
+    df.write
+      .partitionBy("gender","salary")
+      .parquet("/tmp/output/people2.parquet")
+    val parqDF2 = spark.read.parquet("/tmp/output/people2.parquet")
+    parqDF2.createOrReplaceTempView("ParquetTable2")
+    val df3 = spark.sql("select * from ParquetTable2  where gender='M' and salary >= 4000")
+    df3.explain()
+    df3.printSchema()
+    df3.show()
+    val parqDF3 = spark.read
+      .parquet("/tmp/output/people2.parquet/gender=M")
+    parqDF3.show()
+  }
+}
 ```
 
 
 
-Applying DataFrame transformations
-----------------------------------------------------------------------------------------------------------------
+#### Conclusion:
 
-Once you have [created
-DataFrame]
-from the CSV file, you can apply all transformation and actions
-DataFrame support. Please refer to the link for more details. 
-
-Write Spark DataFrame to CSV file
---------------------------------------------------------------------------------------------------------------
-
-Use the `write()` method of the Spark DataFrameWriter object to write
-Spark DataFrame to a CSV file. For detailed example refer to [Writing
-Spark DataFrame to CSV File using
-Options].
-
-```
- 
-df2.write.option("header","true")
- .csv("/tmp/spark_output/zipcodes")
-```
-
-
-
-### Options
-
-While writing a CSV file you can use several options. for example,
-`header` to output the DataFrame column names as header record and
-`delimiter` to specify the delimiter on the CSV output file.
-
-```
- 
-df2.write.options("header",true)
- .csv("/tmp/spark_output/zipcodes")
- 
-```
-
-
-
-Other options
-available `quote`,`escape`,`nullValue`,`dateFormat`,`quoteMode` .
-
-### Saving modes
-
-Spark DataFrameWriter also has a method mode() to specify SaveMode; the
-argument to this method either takes below string or a constant from
-`SaveMode` class.
-
-overwrite -- mode is used to overwrite the existing file, alternatively,
-you can use `SaveMode.Overwrite`.
-
-append -- To add the data to the existing file, alternatively, you can
-use `SaveMode.Append`.
-
-ignore -- Ignores write operation when the file already exists,
-alternatively you can use `SaveMode.Ignore`.
-
-errorifexists or error -- This is a default option when the file already
-exists, it returns an error, alternatively, you can use
-`SaveMode.ErrorIfExists`.
-
-```
- 
-df2.write.mode(SaveMode.Overwrite).csv("/tmp/spark_output/zipcodes")
-```
-
-
-
-Conclusion:
------------
-
-In this tutorial, you have learned how to read a CSV file, multiple csv
-files and all files from a local folder into Spark DataFrame, using
-multiple options to change the default behavior and write CSV files back
-to DataFrame using different save options.
+You have learned how to read a write an apache parquet data files in
+Spark and also learned [how to improve the
+performance]
+by using partition and filtering data with a partition key and finally
+appending to and overwriting existing parquet files.
 

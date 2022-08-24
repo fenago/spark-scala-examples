@@ -1,188 +1,135 @@
 
 
-Spark SQL Shuffle Partitions
-============================
+Spark Persistence Storage Levels
+================================
 
 
 
-The Spark SQL shuffle is a mechanism for redistributing or
-re-partitioning data so that the data is grouped differently across
-partitions, based on your data size you may need to reduce or increase
-the number of partitions of RDD/DataFrame using
-`spark.sql.shuffle.partitions` configuration or through code.
+All different persistence (persist() method) storage level Spark/PySpark
+supports are available at `org.apache.spark.storage.StorageLevel` and
+`pyspark.StorageLevel` classes respectively. The storage level specifies
+how and where to persist or cache a Spark/PySpark RDD, DataFrame, and
+Dataset.
 
 
 
-Spark shuffle is a very expensive operation as it moves the data between
-executors or even between worker nodes in a cluster so try to avoid it
-when possible. When you have a performance issue on Spark jobs, you
-should look at the Spark transformations that involve shuffling.
+All these Storage levels are passed as an argument to the persist()
+method of the Spark/Pyspark RDD, DataFrame, and Dataset.
 
-In this tutorial, you will learn what triggers the shuffle on RDD and
-DataFrame transformations using scala examples. The same approach also
-can be used with PySpark (Spark with Python)
+F**or example**
 
 
-
-What is Spark Shuffle?
----------------------------------------------------------------------------------------
-
-Shuffling is a mechanism Spark uses to [redistribute the
-data]
-across different executors and even across machines. Spark shuffling
-triggers for transformation operations like `gropByKey()`,
-`reducebyKey()`, `join()`, `groupBy()` e.t.c
-
-Spark Shuffle is an expensive operation since it involves the following
-
--   Disk I/O
--   Involves data serialization and deserialization
--   Network I/O
-
-When [creating an
-RDD](),
-Spark doesn't necessarily store the data for all keys in a partition
-since at the time of creation there is no way we can set the key for the
-data set.
-
-
-
-Hence, when we run the reduceByKey() operation to aggregate the data on
-keys, Spark does the following.
-
--   Spark first runs m*ap* tasks on all partitions which groups all
-    values for a single key.
--   The results of the map tasks are kept in memory.
--   When results do not fit in memory, Spark stores the data on a disk.
--   Spark shuffles the mapped data across partitions, some times it also
-    stores the shuffled data into a disk for reuse when it needs to
-    recalculate.
--   Run the garbage collection
--   Finally runs reduce tasks on each partition based on key.
-
-Spark RDD Shuffle
-------------------------------------------------------------------------------
-
-Spark RDD triggers shuffle for several operations like
-`repartition()`,  `groupByKey()`,  `reduceByKey()`,
-`cogroup()` and `join()` but not `countByKey()` .
 
 ```
-val spark:SparkSession = SparkSession.builder()
-    .master("local[5]")
-    .appName("sparkexamples")
-    .getOrCreate()
-
-val sc = spark.sparkContext
-
-val rdd:RDD[String] = sc.textFile("src/main/resources/test.txt")
-
-println("RDD Parition Count :"+rdd.getNumPartitions)
-val rdd2 = rdd.flatMap(f=>f.split(" "))
-  .map(m=>(m,1))
-
-//ReduceBy transformation
-val rdd5 = rdd2.reduceByKey(_ + _)
-
-println("RDD Parition Count :"+rdd5.getNumPartitions)
-
-#Output
-RDD Parition Count : 3
-RDD Parition Count : 3
+import org.apache.spark.storage.StorageLevel
+val rdd2 = rdd.persist(StorageLevel.MEMORY_ONLY_SER)
+or 
+val df2 = df.persist(StorageLevel.MEMORY_ONLY_SER)
 ```
 
 
 
-Both `getNumPartitions` from the above examples return the same number
-of partitions. Though `reduceByKey()` triggers data shuffle, it doesn't
-change the partition count as RDD's inherit the partition size from
-parent RDD.
+Here, I will describe all storage levels available in Spark.
+
+Memory only Storage level
+----------------------------------------------------------------------------------------------
+
+`StorageLevel.MEMORY_ONLY` is the default behavior of the
+RDD `cache()` method
+and stores the RDD or DataFrame as deserialized objects to JVM memory.
+When there is not enough memory available it will not save DataFrame of
+some partitions and these will be re-computed as and when required.
+
+This takes more memory. but unlike RDD, this would be slower
+than **MEMORY\_AND\_DISK** level as it recomputes the unsaved
+partitions, and recomputing the in-memory columnar representation of the
+underlying table is expensive.
+
+
+
+Serialize in Memory
+----------------------------------------------------------------------------------
+
+`StorageLevel.MEMORY_ONLY_SER` is the same as `MEMORY_ONLY` but the
+difference being it stores RDD as serialized objects to JVM memory. It
+takes lesser memory (space-efficient) than MEMORY\_ONLY as it saves
+objects as serialized and takes an additional few more CPU cycles in
+order to deserialize.
+
+Memory only and Replicate
+----------------------------------------------------------------------------------------------
+
+`StorageLevel.MEMORY_ONLY_2` is same as `MEMORY_ONLY` storage level but
+replicate each partition to two cluster nodes.
 
 
 
 
 
 
-You may get partition counts different based on your setup and how Spark
-creates partitions.
+Serialized in Memory and Replicate
+----------------------------------------------------------------------------------------------------------------
 
-Spark SQL DataFrame Shuffle
---------------------------------------------------------------------------------------------------
+`StorageLevel.MEMORY_ONLY_SER_2` is same as `MEMORY_ONLY_SER` storage
+level but replicate each partition to two cluster nodes.
 
-Unlike RDD, Spark SQL DataFrame API increases the partitions when the
-transformation operation performs shuffling. DataFrame operations that
-trigger shufflings are
-[join()],
-and all [aggregate
-functions].
+Memory and Disk Storage level
+------------------------------------------------------------------------------------------------------
+
+`StorageLevel.MEMORY_AND_DISK` is the default behavior of the DataFrame
+or Dataset. In this Storage Level, The DataFrame will be stored in JVM
+memory as deserialized objects. When required storage is greater than
+available memory, it stores some of the excess partitions into a disk
+and reads the data from the disk when required. It is slower as there is
+I/O involved.
+
+Serialize in Memory and Disk
+----------------------------------------------------------------------------------------------------
+
+`StorageLevel.MEMORY_AND_DISK_SER` is same as `MEMORY_AND_DISK` storage
+level difference being it serializes the DataFrame objects in memory and
+on disk when space is not available.
+
+Memory, Disk and Replicate
+-----------------------------------------------------------------------------------------------
+
+`StorageLevel.MEMORY_AND_DISK_2` is Same as `MEMORY_AND_DISK` storage
+level but replicate each partition to two cluster nodes.
+
+Serialize in Memory, Disk and Replicate
+-------------------------------------------------------------------------------------------------------------------------
+
+`StorageLevel.MEMORY_AND_DISK_SER_2` is same
+as `MEMORY_AND_DISK_SER` storage level but replicate each partition to
+two cluster nodes.
+
+Disk only storage level
+------------------------------------------------------------------------------------------
+
+In `StorageLevel.DISK_ONLY` storage level, DataFrame is stored only on
+disk and the CPU computation time is high as I/O involved.
+
+Disk only and Replicate
+------------------------------------------------------------------------------------------
+
+`StorageLevel.DISK_ONLY_2` is same as `DISK_ONLY` storage level but
+replicate each partition to two cluster nodes.
+
+When to use what?
+-----------------------------------------------------------------------------
+
+Below is the table representation of the Storage level, Go through the
+impact of space, CPU, and performance choose the one that best fits you.
 
 ```
-import spark.implicits._
-
-val simpleData = Seq(("James","Sales","NY",90000,34,10000),
-    ("Michael","Sales","NY",86000,56,20000),
-    ("Robert","Sales","CA",81000,30,23000),
-    ("Maria","Finance","CA",90000,24,23000),
-    ("Raman","Finance","CA",99000,40,24000),
-    ("Scott","Finance","NY",83000,36,19000),
-    ("Jen","Finance","NY",79000,53,15000),
-    ("Jeff","Marketing","CA",80000,25,18000),
-    ("Kumar","Marketing","NY",91000,50,21000)
-  )
-val df = simpleData.toDF("employee_name","department","state","salary","age","bonus")
-
-val df2 = df.groupBy("state").count()
-
-println(df2.rdd.getNumPartitions)
+Storage Level    Space used  CPU time  In memory  On-disk  Serialized   Recompute some partitions
+----------------------------------------------------------------------------------------------------
+MEMORY_ONLY          High        Low       Y          N        N         Y    
+MEMORY_ONLY_SER      Low         High      Y          N        Y         Y
+MEMORY_AND_DISK      High        Medium    Some       Some     Some      N
+MEMORY_AND_DISK_SER  Low         High      Some       Some     Y         N
+DISK_ONLY            Low         High      N          Y        Y         N
 ```
 
 
 
-This outputs the partition count as 200.
-
-Spark Default Shuffle Partition
-----------------------------------------------------------------------------------------------------------
-
-DataFrame increases the partition number to 200 automatically when Spark
-operation performs data shuffling (join(), aggregation functions). This
-default shuffle partition number comes from Spark SQL
-configuration `spark.sql.shuffle.partitions` which is by default set to
-`200`.
-
-You can change this default shuffle partition value using
-*`conf`* method of the *`SparkSession`* object or using [Spark Submit
-Command
-Configurations].
-
-```
-spark.conf.set("spark.sql.shuffle.partitions",100)
-println(df.groupBy("_c0").count().rdd.partitions.length)
-```
-
-
-
-Shuffle partition size
-----------------------------------------------------------------------------------------
-
-Based on your dataset size, number of cores, and memory, Spark shuffling
-can benefit or harm your jobs. When you dealing with less amount of
-data, you should typically reduce the shuffle partitions otherwise you
-will end up with many partitioned files with a fewer number of records
-in each partition. which results in running many tasks with lesser data
-to process.
-
-On another hand, when you have too much data and have less number of
-partitions results in fewer longer running tasks, and sometimes you may
-also get out of memory error.
-
-Getting the right size of the shuffle partition is always tricky and
-takes many runs with different values to achieve the optimized number.
-This is one of the key properties to look for when you have performance
-issues on Spark jobs.
-
-### Conclusion
-
-In this article, you have learned what is Spark SQL shuffle, how some
-Spark operation triggers re-partition of the data, how to change the
-default spark shuffle partition, and finally how to get the right
-partition size.

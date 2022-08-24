@@ -1,232 +1,318 @@
 
-
-Read & Write Avro files using Spark DataFrame
-=============================================
-
-
-
-**Related:** [Spark from\_avro() and to\_avro()
-usage]
-
-What is Apache Avro?
------------------------------------------------------------------------------------
-
-[Apache Avro](https://avro.apache.org/docs/current/) is an open-source,
-row-based, data serialization and data exchange framework for Hadoop
-projects, originally developed by databricks as an open-source library
-that supports reading and writing data in Avro file format. it is mostly
-used in Apache Spark especially for Kafka-based data pipelines. When
-Avro data is stored in a file, its schema is stored with it, so that
-files may be processed later by any program.
-
-It has build to serialize and exchange big data between different Hadoop
-based projects. It serializes data in a compact binary format and schema
-is in JSON format that defines the field names and data types.
+Spark Read from & Write to HBase table \| Example
+=================================================
 
 
 
-It is similar
-to [Thrift](https://en.wikipedia.org/wiki/Thrift_(protocol)) and [Protocol
-Buffers](https://en.wikipedia.org/wiki/Protocol_Buffers), but does not
-require the code generation as it's data always accompanied by a schema
-that permits full processing of that data without code generation. This
-is one of the great advantages compared with other serialization
-systems.
 
-Apache Avro Advantages
-----------------------------------------------------------------------------------------
+This tutorial explains how to read or load from and write Spark (2.4.X
+version) DataFrame rows to HBase table using `hbase-spark` connector and
+Datasource  `"org.apache.spark.sql.execution.datasources.hbase"` along
+with Scala example.
 
--   Supports complex data structures like Arrays, Map, Array of map and
-    map of array elements.
--   A compact, binary serialization format which provides fast while
-    transferring data.
--   row-based data serialization system.
--   Support multi-languages, meaning data written by one language can be
-    read by different languages.
--   Code generation is not required to read or write data files.
--   Simple integration with dynamic languages.
 
-Spark Avro dependencies
-------------------------------------------------------------------------------------------
 
-Since Spark 2.4, [Spark
-SQL](https://spark.apache.org/docs/latest/sql-programming-guide.html) provides
-built-in support for reading and writing Apache Avro data files,
-however, the `spark-avro` module is external and by default, it's not
-included in `spark-submit` or `spark-shell` hence, accessing Avro file
-format in Spark is enabled by providing a package.
 
-#### maven dependencies.
+Spark HBase library dependencies
+--------------------------------
+
+Below HBase libraries are required to connect Spark with the HBase
+database and perform read and write rows to the table.
+
+-   `hbase-client` This library provides by HBase which is used natively
+    to interact with HBase.
+-   `hbase-spark` connector which provides HBaseContext to interact
+    Spark with HBase. HBaseContext pushes the configuration to the Spark
+    executors and allows it to have an HBase Connection per Executor.
+
+Below are complete maven dependencies to run the below examples in your
+environment. Note that "hbase-client" has not provided as a dependency
+since Spark HBase connector provides this as a transitive dependency and
+this is a recommended way otherwise you may come across incompatibility
+issues between these two.
+
+
 
 ```
-<dependency>
-    <groupId>org.apache.spark</groupId>
-    <artifactId>spark-avro_2.11</artifactId>
-    <version>2.4.0</version>
-</dependency>
+  <dependencies>
+
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <version>2.11.12</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-core_2.11</artifactId>
+      <version>2.4.0</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-sql_2.11</artifactId>
+      <version>2.4.0</version>
+      <scope>compile</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.apache.spark</groupId>
+      <artifactId>spark-streaming_2.11</artifactId>
+      <version>2.4.0</version>
+    </dependency>
+
+   <dependency>
+     <groupId>org.apache.hbase.connectors.spark</groupId>
+     <artifactId>hbase-spark</artifactId>
+     <version>1.0.0</version>
+   </dependency>
+
+  </dependencies>
 ```
 
-#### spark-submit
+Writing Spark DataFrame to HBase table using "hbase-spark" connector
+--------------------------------------------------------------------
 
-While using `spark-submit`, provide `spark-avro_2.12` and its
-dependencies directly using `--packages`, such as,
-
-```
-./bin/spark-submit --packages org.apache.spark:spark-avro_2.12:2.4.4
-```
-
-
-
-#### spark-shell
-
-While working with  `spark-shell`, you can also use `--packages` to
-add `spark-avro_2.12` and its dependencies directly,
+First, let's create a DataFrame which we will store to HBase using
+"hbase-spark" connector. In this snippet, we are creating an employee DF
+with 3 rows.
 
 ```
-./bin/spark-shell --packages org.apache.spark:spark-avro_2.12:2.4.4
-```
+case class Employee(key: String, fName: String, lName: String,
+                      mName:String, addressLine:String, city:String,
+                      state:String, zipCode:String)
 
+ val data = Seq(Employee("1","Abby","Smith","K","3456 main", "Orlando","FL","45235"),
+      Employee("2","Amaya","Williams","L","123 Orange","Newark", "NJ", "27656"),
+      Employee("3","Alchemy","Davis","P","Warners","Sanjose","CA", "34789"))
 
+    val spark: SparkSession = SparkSession.builder()
+      .master("local[1]")
+      .appName("sparkexamples")
+      .getOrCreate()
 
-Write Spark DataFrame to Avro Data File
---------------------------------------------------------------------------------------------------------------------------
-
-Since Avro library is external to Spark, it doesn't provide `avro()`
-function on `DataFrameWriter` , hence we should use DataSource "`avro`"
-or "`org.apache.spark.sql.avro`" to write Spark DataFrame to Avro file.
-
-```
-df.write.format("avro").save("person.avro")
+    import spark.implicits._
+    val df = spark.sparkContext.parallelize(data).toDF
 ```
 
 
 
-Read Avro Data File to Spark DataFrame
-------------------------------------------------------------------------------------------------------------------------
-
-Similarly `avro()` function is not provided in Spark `DataFrameReader` 
-hence, we should use DataSource format as "avro" or
-"org.apache.spark.sql.avro" and `load()` is used to read the Avro file.
-
-```
-val personDF= spark.read.format("avro").load("person.avro")
-```
-
-
-
-Writing Avro Partition Data
---------------------------------------------------------------------------------------------------
-
-Spark `DataFrameWriter` provides `partitionBy()` function to partition
-the Avro at the time of writing. Partition improves performance on
-reading by reducing Disk I/O.
+Now, Let's define a catalog which bridges the gap between HBase KV store
+and DataFrame table structure. using this we will also map the column
+names between the two structures and keys. please refer below example
+for the snippet. within the catalog, we also specify the HBase table we
+are going to use and the namespace. here, we are using the "employee"
+table in the "default" namespace.
 
 ```
-val data = Seq(("James ","","Smith",2018,1,"M",3000),
-      ("Michael ","Rose","",2010,3,"M",4000),
-      ("Robert ","","Williams",2010,3,"M",4000),
-      ("Maria ","Anne","Jones",2005,5,"F",4000),
-      ("Jen","Mary","Brown",2010,7,"",-1)
-    )
-
-val columns = Seq("firstname", "middlename", "lastname", "dob_year",
- "dob_month", "gender", "salary")
-import spark.sqlContext.implicits._
-val df = data.toDF(columns:_*)
-
-df.write.partitionBy("dob_year","dob_month")
-        .format("avro").save("person_partition.avro")
+def catalog =
+      s"""{
+         |"table":{"namespace":"default", "name":"employee"},
+         |"rowkey":"key",
+         |"columns":{
+         |"key":{"cf":"rowkey", "col":"key", "type":"string"},
+         |"fName":{"cf":"person", "col":"firstName", "type":"string"},
+         |"lName":{"cf":"person", "col":"lastName", "type":"string"},
+         |"mName":{"cf":"person", "col":"middleName", "type":"string"},
+         |"addressLine":{"cf":"address", "col":"addressLine", "type":"string"},
+         |"city":{"cf":"address", "col":"city", "type":"string"},
+         |"state":{"cf":"address", "col":"state", "type":"string"},
+         |"zipCode":{"cf":"address", "col":"zipCode", "type":"string"}
+         |}
+         |}""".stripMargin
 ```
 
 
 
-This example creates partition by "date of birth year and month" on
-person data. As shown in the below screenshot, Avro creates a folder for
-each partition data.
-
-![](./images/spark-avro-1024x344.jpg)
-
-Reading Avro Partition Data
---------------------------------------------------------------------------------------------------
-
-When we try to retrieve the data from partition, It just reads the data
-from the partition folder without scanning entire Avro files.
+Finally, let's store the DataFrame to HBase table using save() function
+on the data frame. from the below example, format
+takes `"org.apache.spark.sql.execution.datasources.hbase"` DataSource
+defined in "hbase-spark" API which enables us to use DataFrame with
+HBase tables. And, `df.write.options` take the catalog and specifies to
+use 4 regions in cluster. Finally, `save()`writes it to HBase table.
 
 ```
-spark.read
-      .format("avro")
-      .load("person_partition.avro")
-      .where(col("dob_year") === 2010)
-      .show()
+df.write.options(
+      Map(HBaseTableCatalog.tableCatalog -> catalog, HBaseTableCatalog.newTable -> "4"))
+      .format("org.apache.spark.sql.execution.datasources.hbase")
+      .save()
 ```
 
 
 
-Using Avro Schema
-------------------------------------------------------------------------------
-
-Avro schemas are usually defined with .avsc extension and the format of
-the file is in JSON. Will store below schema in `person.avsc` file and
-provide this file using option() while reading an Avro file. This schema
-provides the structure of the Avro file with field names and it's data
-types.
-
+Below is the complete example, and the same is available at
+[GitHub](https://github.com/sparkbyexamples/spark-hbase-connector-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/hbase/dataframe/HBaseSparkInsert.scala)
 
 ```
-{
-  "type": "record",
-  "name": "Person",
-  "namespace": "com.sparkbyexamples",
-  "fields": [
-    {"name": "firstname","type": "string"},
-    {"name": "middlename","type": "string"},
-    {"name": "lastname","type": "string"},
-    {"name": "dob_year","type": "int"},
-    {"name": "dob_month","type": "int"},
-    {"name": "gender","type": "string"},
-    {"name": "salary","type": "int"}
-  ]
+package com.sparkbyexamples.spark.hbase.dataframe
+
+import org.apache.hadoop.hbase.spark.datasources.HBaseTableCatalog
+import org.apache.spark.sql.SparkSession
+
+object HBaseSparkInsert {
+
+  case class Employee(key: String, fName: String, lName: String,
+                      mName:String, addressLine:String, city:String,
+                      state:String, zipCode:String)
+
+  def main(args: Array[String]): Unit = {
+
+    def catalog =
+      s"""{
+         |"table":{"namespace":"default", "name":"employee"},
+         |"rowkey":"key",
+         |"columns":{
+         |"key":{"cf":"rowkey", "col":"key", "type":"string"},
+         |"fName":{"cf":"person", "col":"firstName", "type":"string"},
+         |"lName":{"cf":"person", "col":"lastName", "type":"string"},
+         |"mName":{"cf":"person", "col":"middleName", "type":"string"},
+         |"addressLine":{"cf":"address", "col":"addressLine", "type":"string"},
+         |"city":{"cf":"address", "col":"city", "type":"string"},
+         |"state":{"cf":"address", "col":"state", "type":"string"},
+         |"zipCode":{"cf":"address", "col":"zipCode", "type":"string"}
+         |}
+         |}""".stripMargin
+
+
+    val data = Seq(Employee("1","Abby","Smith","K","3456 main", "Orlando","FL","45235"),
+      Employee("2","Amaya","Williams","L","123 Orange","Newark", "NJ", "27656"),
+      Employee("3","Alchemy","Davis","P","Warners","Sanjose","CA", "34789"))
+
+    val spark: SparkSession = SparkSession.builder()
+      .master("local[1]")
+      .appName("sparkexamples")
+      .getOrCreate()
+
+    import spark.implicits._
+    val df = spark.sparkContext.parallelize(data).toDF
+
+    df.write.options(
+      Map(HBaseTableCatalog.tableCatalog -> catalog, HBaseTableCatalog.newTable -> "4"))
+      .format("org.apache.spark.sql.execution.datasources.hbase")
+      .save()
+  }
 }
 ```
 
 
 
-You can download Avro schema example from
-[GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-avro-examples/src/main/scala/com/sparkbyexamples/spark/dataframe/avro/AvroExample.scala)
+If you use `scan 'employee'` on a shell, you will get the below 3 rows
+as an output.
+
+![Spark HBase
+Connector]
+
+Reading the table to DataFrame using "hbase-spark"
+--------------------------------------------------
+
+In this example, I will explain how to read data from the HBase table,
+create a DataFrame and finally run some filters using DSL and SQL's.
+
+Below is a complete example and it is also available at
+[GitHub](https://github.com/sparkbyexamples/spark-hbase-connector-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/hbase/dataframe/HBaseSparkRead.scala).
 
 ```
-val schemaAvro = new Schema.Parser()
-      .parse(new File("src/main/resources/person.avsc"))
+package com.sparkbyexamples.spark.hbase.dataframe
 
-val df = spark.read
-              .format("avro")
-              .option("avroSchema", schemaAvro.toString)
-              .load("person.avro")
+import org.apache.hadoop.hbase.spark.datasources.HBaseTableCatalog
+import org.apache.spark.sql.SparkSession
+
+object HBaseSparkRead {
+
+  def main(args: Array[String]): Unit = {
+
+    def catalog =
+      s"""{
+         |"table":{"namespace":"default", "name":"employee"},
+         |"rowkey":"key",
+         |"columns":{
+         |"key":{"cf":"rowkey", "col":"key", "type":"string"},
+         |"fName":{"cf":"person", "col":"firstName", "type":"string"},
+         |"lName":{"cf":"person", "col":"lastName", "type":"string"},
+         |"mName":{"cf":"person", "col":"middleName", "type":"string"},
+         |"addressLine":{"cf":"address", "col":"addressLine", "type":"string"},
+         |"city":{"cf":"address", "col":"city", "type":"string"},
+         |"state":{"cf":"address", "col":"state", "type":"string"},
+         |"zipCode":{"cf":"address", "col":"zipCode", "type":"string"}
+         |}
+         |}""".stripMargin
+
+    val spark: SparkSession = SparkSession.builder()
+      .master("local[1]")
+      .appName("sparkexamples")
+      .getOrCreate()
+
+    import spark.implicits._
+
+    // Reading from HBase to DataFrame
+    val hbaseDF = spark.read
+      .options(Map(HBaseTableCatalog.tableCatalog -> catalog))
+      .format("org.apache.spark.sql.execution.datasources.hbase")
+      .load()
+
+    //Display Schema from DataFrame
+    hbaseDF.printSchema()
+
+    //Collect and show Data from DataFrame
+    hbaseDF.show(false)
+
+    //Applying Filters
+    hbaseDF.filter($"key" === "1" && $"state" === "FL")
+      .select("key", "fName", "lName")
+      .show()
+
+    //Create Temporary Table on DataFrame
+    hbaseDF.createOrReplaceTempView("employeeTable")
+
+    //Run SQL
+    spark.sql("select * from employeeTable where fName = 'Amaya' ").show
+
+  }
+}
 ```
 
 
 
-Alternatively, we can also specify the [StructType using the schema
-method].
-
-Using Avro with Spark SQL
-----------------------------------------------------------------------------------------------
-
-We can also read Avro data files using SQL, to do this, first, create a
-temporary table by pointing to the Avro data file and run the SQL
-command on the table.
+`hbaseDF.printSchema()` displays the below schema.
 
 ```
-spark.sqlContext.sql("CREATE TEMPORARY VIEW PERSON USING avro 
-OPTIONS (path \"person.avro\")")
-spark.sqlContext.sql("SELECT * FROM PERSON").show()
+root
+ |-- key: string (nullable = true)
+ |-- fName: string (nullable = true)
+ |-- lName: string (nullable = true)
+ |-- mName: string (nullable = true)
+ |-- addressLine: string (nullable = true)
+ |-- city: string (nullable = true)
+ |-- state: string (nullable = true)
+ |-- zipCode: string (nullable = true)
 ```
 
 
 
-#### **Conclusion:**
+`hbaseDF.show(false)` get the below data. Please note the DataFrame
+field names differences with table column cell names.
 
-We have seen examples of how to write Avro data files and how to read
-using Spark DataFrame. Also, I've explained working with Avro partition
-and how it improves while reading Avro file. Using Partition we can
-achieve a significant performance on reading.
+```
++---+-------+--------+-----+-----------+-------+-----+-------+
+|key|fName  |lName   |mName|addressLine|city   |state|zipCode|
++---+-------+--------+-----+-----------+-------+-----+-------+
+|1  |Abby   |Smith   |K    |3456 main  |Orlando|FL   |45235  |
+|2  |Amaya  |Williams|L    |123 Orange |Newark |NJ   |27656  |
+|3  |Alchemy|Davis   |P    |Warners    |Sanjose|CA   |34789  |
++---+-------+--------+-----+-----------+-------+-----+-------+
+```
+
+
+
+###### Conclusion
+
+In this tutorial, you have learned how the read from and write DataFrame
+rows to HBase table using Spark HBase connector and Datasource
+ `"org.apache.spark.sql.execution.datasources.hbase"` with Scala
+example.
+
+This complete project with Maven dependencies and many more HBase
+examples are available at [GitHub "spark-hbase-connector-examples"
+project](https://github.com/sparkbyexamples/spark-hbase-connector-examples)
+

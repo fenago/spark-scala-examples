@@ -1,396 +1,325 @@
 
-
-Spark RDD Actions with examples
-===============================
-
-
-RDD actions are operations that return the raw values, In other words,
-any RDD function that returns other than RDD\[T\] is considered as an
-action in spark programming. In this tutorial, we will learn RDD actions
-with Scala examples.
+Spark Pair RDD Functions
+========================
 
 
 
-As mentioned in [RDD Transformations],
-all transformations are lazy meaning they do not get executed right away
-and action functions trigger to execute the transformations.
+Spark defines **PairRDDFunctions** class with several functions to work
+with Pair RDD or RDD key-value pair, In this tutorial, we will learn
+these functions with Scala examples. Pair RDD's are come in handy when
+you need to apply transformations like hash partition, set operations,
+joins e.t.c.
 
 
-Complete code I've used in this article is available at [GitHub project
-for quick
-reference](https://github.com/fenago/spark-scala-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/rdd/RDDActions.scala).
 
+All these functions are grouped into Transformations and Actions similar
+to regular RDD's.
 
-RDD Actions Example
-----------------------------------------------------------------------------------
+Spark Pair RDD Transformation Functions
+--------------------------------------------------------------------------------------------------------------------------
 
-Before we start explaining RDD actions with examples, first, let's
-create an RDD.
+  Pair RDD Functions         Function Description
+  -------------------------- --------------------------------------------------------------------------------------------------------------------------------
+  aggregateByKey             Aggregate the values of each key in a data set. This function can return a different result type then the values in input RDD.
+  combineByKey               Combines the elements for each key.
+  combineByKeyWithClassTag   Combines the elements for each key.
+  flatMapValues              It\'s flatten the values of each key with out changing key values and keeps the original RDD partition.
+  foldByKey                  Merges the values of each key.
+  groupByKey                 Returns the grouped RDD by grouping the values of each key.
+  mapValues                  It applied a map function for each value in a pair RDD with out changing keys.
+  reduceByKey                Returns a merged RDD by merging the values of each key.
+  reduceByKeyLocally         Returns a merged RDD by merging the values of each key and final result will be sent to the master.
+  sampleByKey                Returns the subset of the RDD.
+  subtractByKey              Return an RDD with the pairs from this whose keys are not in other.
+  keys                       Returns all keys of this RDD as a RDD\[T\].
+  values                     Returns an RDD with just values.
+  partitionBy                Returns a new RDD after applying specified partitioner.
+  fullOuterJoin              Return RDD after applying fullOuterJoin on current and parameter RDD
+  join                       Return RDD after applying join on current and parameter RDD
+  leftOuterJoin              Return RDD after applying leftOuterJoin on current and parameter RDD
+  rightOuterJoin             Return RDD after applying rightOuterJoin on current and parameter RDD
+
+Spark Pair RDD Actions
+----------------------------------------------------------------------------------------
+
+  Pair RDD Action functions   Function Description
+  --------------------------- --------------------------------------------------------------------------------------------------------------------------------------------------
+  collectAsMap                Returns the pair RDD as a Map to the Spark Master.
+  countByKey                  Returns the count of each key elements. This returns the final result to local Map which is your driver.
+  countByKeyApprox            Same as countByKey but returns the partial result. This takes a timeout as parameter to specify how long this function to run before returning.
+  lookup                      Returns a list of values from RDD for a given input key.
+  reduceByKeyLocally          Returns a merged RDD by merging the values of each key and final result will be sent to the master.
+  saveAsHadoopDataset         Saves RDD to any hadoop supported file system (HDFS, S3, ElasticSearch, e.t.c), It uses Hadoop JobConf object to save.
+  saveAsHadoopFile            Saves RDD to any hadoop supported file system (HDFS, S3, ElasticSearch, e.t.c), It uses Hadoop OutputFormat class to save.
+  saveAsNewAPIHadoopDataset   Saves RDD to any hadoop supported file system (HDFS, S3, ElasticSearch, e.t.c) with new Hadoop API, It uses Hadoop Configuration object to save.
+  saveAsNewAPIHadoopFile      Saves RDD to any hadoop supported fule system (HDFS, S3, ElasticSearch, e.t.c), It uses new Hadoop API OutputFormat class to save.
+
+Pair RDD Functions Examples
+--------------------------------------------------------------------------------------------------
+
+In this section, I will explain Spark pair RDD functions with scala
+examples, before we get started let's create a pair RDD.
 
 
 
 ```
-  val spark = SparkSession.builder()
-    .appName("SparkByExample")
-    .master("local")
-    .getOrCreate()
-
-  spark.sparkContext.setLogLevel("ERROR")
-  val inputRDD = spark.sparkContext.parallelize(List(("Z", 1),("A", 20),("B", 30),("C", 40),("B", 30),("B", 60)))
-  
-  val listRdd = spark.sparkContext.parallelize(List(1,2,3,4,5,3,2))
+val spark = SparkSession.builder()
+   .appName("SparkByExample")
+   .master("local")
+   .getOrCreate()
+ val rdd = spark.sparkContext.parallelize(
+      List("Germany India USA","USA India Russia","India Brazil Canada China")
+    )
+ val wordsRdd = rdd.flatMap(_.split(" "))
+ val pairRDD = wordsRdd.map(f=>(f,1))
+ pairRDD.foreach(println)
 ```
 
 
 
-Note that we have created two RDD's in the above code snippet and we use
-these two as and when necessary to demonstrate the RDD actions.
-
-### aggregate -- action
-
-`aggregate()` the elements of each partition, and then the results for
-all the partitions.
+This snippet creates a pair RDD by splitting by space on every element
+in an RDD, flatten it to form a single word string on each element in
+RDD and finally assigns an integer "1" to every word.
 
 ```
-  //aggregate
-  def param0= (accu:Int, v:Int) => accu + v
-  def param1= (accu1:Int,accu2:Int) => accu1 + accu2
-  println("aggregate : "+listRdd.aggregate(0)(param0,param1))
-  //Output: aggregate : 20
-
-  //aggregate
-  def param3= (accu:Int, v:(String,Int)) => accu + v._2
-  def param4= (accu1:Int,accu2:Int) => accu1 + accu2
-  println("aggregate : "+inputRDD.aggregate(0)(param3,param4))
-  //Output: aggregate : 20
+(Germany,1)
+(India,1)
+(USA,1)
+(USA,1)
+(India,1)
+(Russia,1)
+(India,1)
+(Brazil,1)
+(Canada,1)
+(China,1)
 ```
 
 
 
-### treeAggregate -- action
-
-`treeAggregate()` -- Aggregates the elements of this RDD in a
-multi-level tree pattern. The output of this function will be similar to
-the aggregate function.
+### distinct -- Returns distinct keys.
 
 ```
-  //treeAggregate. This is similar to aggregate
-  def param8= (accu:Int, v:Int) => accu + v
-  def param9= (accu1:Int,accu2:Int) => accu1 + accu2
-  println("treeAggregate : "+listRdd.treeAggregate(0)(param8,param9))
-  //Output: treeAggregate : 20
-```
+pairRDD.distinct().foreach(println)
 
-
-
-### fold -- action
-
-`fold()` -- Aggregate the elements of each partition, and then the
-results for all the partitions.
-
-```
-  //fold
-  println("fold :  "+listRdd.fold(0){ (acc,v) =>
-    val sum = acc+v
-    sum
-  })
-  //Output: fold :  20
-
-  println("fold :  "+inputRDD.fold(("Total",0)){(acc:(String,Int),v:(String,Int))=>
-    val sum = acc._2 + v._2
-    ("Total",sum)
-  })
-  //Output: fold :  (Total,181)
+//Prints below output
+(Germany,1)
+(India,1)
+(Brazil,1)
+(China,1)
+(USA,1)
+(Canada,1)
+(Russia,1)
 ```
 
 
 
-### reduce
-
-`reduce()` -- Reduces the elements of the dataset using the specified
-binary operator.
+### sortByKey -- Transformation returns an RDD after sorting by key
 
 ```
-  //reduce
-  println("reduce : "+listRdd.reduce(_ + _))
-  //Output: reduce : 20
-  println("reduce alternate : "+listRdd.reduce((x, y) => x + y))
-  //Output: reduce alternate : 20
-  println("reduce : "+inputRDD.reduce((x, y) => ("Total",x._2 + y._2)))
-  //Output: reduce : (Total,181)
+    println("Sort by Key ==>")
+    val sortRDD = pairRDD.sortByKey()
+    sortRDD.foreach(println)
 ```
 
 
 
-### treeReduce
-
-`treeReduce()` -- Reduces the elements of this RDD in a multi-level tree
-pattern.
+Yields below output.
 
 ```
-  //treeReduce. This is similar to reduce
-  println("treeReduce : "+listRdd.treeReduce(_ + _))
-  //Output: treeReduce : 20
-```
-
-
-
-### collect
-
-`collect()` -Return the complete dataset as an Array.
-
-```
-  //Collect
-  val data:Array[Int] = listRdd.collect()
-  data.foreach(println)
+Sort by Key ==>
+(Brazil,1)
+(Canada,1)
+(China,1)
+(Germany,1)
+(India,1)
+(India,1)
+(India,1)
+(Russia,1)
+(USA,1)
+(USA,1)
 ```
 
 
 
-### count, countApprox, countApproxDistinct
+### reduceByKey -- Transformation returns an RDD after adding value for each key.
 
-`count()` -- Return the count of elements in the dataset.
+Result RDD contains unique keys.
 
-`countApprox()` -- Return approximate count of elements in the dataset,
-this method returns incomplete when execution time meets timeout.
 
-`countApproxDistinct()` -- Return an approximate number of distinct
-elements in the dataset.
 
 ```
-  //count, countApprox, countApproxDistinct
-  println("Count : "+listRdd.count)
-  //Output: Count : 20
-  println("countApprox : "+listRdd.countApprox(1200))
-  //Output: countApprox : (final: [7.000, 7.000])
-  println("countApproxDistinct : "+listRdd.countApproxDistinct())
-  //Output: countApproxDistinct : 5
-  println("countApproxDistinct : "+inputRDD.countApproxDistinct())
-  //Output: countApproxDistinct : 5
+    println("Reduce by Key ==>")
+    val wordCount = pairRDD.reduceByKey((a,b)=>a+b)
+    wordCount.foreach(println)
 ```
 
 
 
-### countByValue, countByValueApprox
-
-`countByValue()` -- Return Map\[T,Long\] key representing each unique
-value in dataset and value represents count each value present.
-
-`countByValueApprox()` -- Same as countByValue() but returns approximate
-result.
+This reduces the key by summing the values. Yields below output.
 
 ```
-  //countByValue, countByValueApprox
-  println("countByValue :  "+listRdd.countByValue())
-  //Output: countByValue :  Map(5 -> 1, 1 -> 1, 2 -> 2, 3 -> 2, 4 -> 1)
-  //println(listRdd.countByValueApprox())
+Reduce by Key ==>
+(Brazil,1)
+(Canada,1)
+(China,1)
+(USA,2)
+(Germany,1)
+(Russia,1)
+(India,3)
 ```
 
 
 
-### first
+### aggregateByKey -- Transformation same as reduceByKey
 
-`first()` -- Return the first element in the dataset.
-
-```
-  //first
-  println("first :  "+listRdd.first())
-  //Output: first :  1
-  println("first :  "+inputRDD.first())
-  //Output: first :  (Z,1)
-```
-
-
-
-### top
-
-`top()` -- Return top n elements from the dataset.
-
-Note: Use this method only when the resulting array is small, as all the
-data is loaded into the driver's memory.
+In our example, this is similar to reduceByKey but uses a different
+approach.
 
 ```
-  //top
-  println("top : "+listRdd.top(2).mkString(","))
-  //Output: take : 5,4
-  println("top : "+inputRDD.top(2).mkString(","))
-  //Output: take : (Z,1),(C,40)
+    def param1= (accu:Int,v:Int) => accu + v
+    def param2= (accu1:Int,accu2:Int) => accu1 + accu2
+    println("Aggregate by Key ==> wordcount")
+    val wordCount2 = pairRDD.aggregateByKey(0)(param1,param2)
+    wordCount2.foreach(println)
 ```
 
 
 
-### min
-
-`min()` -- Return the minimum value from the dataset.
-
-```
-  //min
-  println("min :  "+listRdd.min())
-  //Output: min :  1
-  println("min :  "+inputRDD.min())
-  //Output: min :  (A,20)
-```
+This example yields the same output as reduceByKey example.
 
 
 
-### max
 
-`max()` -- Return the maximum value from the dataset.
+
+
+### keys -- Return RDD\[K\] with all keys in an dataset
 
 ```
-  //max
-  println("max :  "+listRdd.max())
-  //Output: max :  5
-  println("max :  "+inputRDD.max())
-  //Output: max :  (Z,1)
+    println("Keys ==>")
+    wordCount2.keys.foreach(println)
 ```
 
 
 
-### take, takeOrdered, takeSample
-
-`take()` -- Return the first num elements of the dataset.
-
-`takeOrdered()` -- Return the first num (smallest) elements from the
-dataset and this is the opposite of the take() action.\
-Note: Use this method only when the resulting array is small, as all the
-data is loaded into the driver's memory.
-
-`takeSample()` -- Return the subset of the dataset in an Array.\
-Note: Use this method only when the resulting array is small, as all the
-data is loaded into the driver's memory.
+Yields below output
 
 ```
-  //take, takeOrdered, takeSample
-  println("take : "+listRdd.take(2).mkString(","))
-  //Output: take : 1,2
-  println("takeOrdered : "+ listRdd.takeOrdered(2).mkString(","))
-  //Output: takeOrdered : 1,2
-  //println("take : "+listRdd.takeSample())
+Brazil
+Canada
+China
+USA
+Germany
+Russia
+India
 ```
 
 
 
-Actions -- Complete example
--------------------------------------------------------------------------------------------------
+### values -- return RDD\[V\] with all values in an dataset
+
+```
+    println("Keys ==>")
+    wordCount2.keys.foreach(println)
+```
+
+
+
+### count -- This is an action function and returns a count of a dataset
+
+```
+println("Count :"+wordCount2.count())
+```
+
+
+
+### collectAsMap -- This is an action function and returns Map to the master for retrieving all date from a dataset.
+
+```
+    println("collectAsMap ==>")
+    pairRDD.collectAsMap().foreach(println)
+```
+
+
+
+Yields below output:
+
+```
+(Brazil,1)
+(Canada,1)
+(Germany,1)
+(China,1)
+(Russia,1)
+(India,1)
+```
+
+
+
+Complete Example
+----------------------------------------------------------------------------
+
+This example is also available at [GitHub
+project](https://github.com/fenago/spark-scala-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/rdd/OperationsOnPairRDD.scala)
 
 ```
 package com.sparkbyexamples.spark.rdd
 
-import com.sparkbyexamples.spark.rdd.OperationOnPairRDDComplex.kv
 import org.apache.spark.sql.SparkSession
 
 import scala.collection.mutable
 
-object RDDActions extends App {
+object OperationsOnPairRDD {
 
-  val spark = SparkSession.builder()
-    .appName("SparkByExample")
-    .master("local")
-    .getOrCreate()
+  def main(args: Array[String]): Unit = {
 
-  spark.sparkContext.setLogLevel("ERROR")
-  val inputRDD = spark.sparkContext.parallelize(List(("Z", 1),("A", 20),("B", 30),("C", 40),("B", 30),("B", 60)))
+    val spark = SparkSession.builder()
+      .appName("SparkByExample")
+      .master("local")
+      .getOrCreate()
 
-  val listRdd = spark.sparkContext.parallelize(List(1,2,3,4,5,3,2))
+    spark.sparkContext.setLogLevel("ERROR")
 
-  //Collect
-  val data:Array[Int] = listRdd.collect()
-  data.foreach(println)
+    val rdd = spark.sparkContext.parallelize(
+      List("Germany India USA","USA India Russia","India Brazil Canada China")
+    )
 
-  //aggregate
-  def param0= (accu:Int, v:Int) => accu + v
-  def param1= (accu1:Int,accu2:Int) => accu1 + accu2
-  println("aggregate : "+listRdd.aggregate(0)(param0,param1))
-  //Output: aggregate : 20
+    val wordsRdd = rdd.flatMap(_.split(" "))
+    val pairRDD = wordsRdd.map(f=>(f,1))
+    pairRDD.foreach(println)
 
-  //aggregate
-  def param3= (accu:Int, v:(String,Int)) => accu + v._2
-  def param4= (accu1:Int,accu2:Int) => accu1 + accu2
-  println("aggregate : "+inputRDD.aggregate(0)(param3,param4))
-  //Output: aggregate : 20
+    println("Distinct ==>")
+    pairRDD.distinct().foreach(println)
 
-  //treeAggregate. This is similar to aggregate
-  def param8= (accu:Int, v:Int) => accu + v
-  def param9= (accu1:Int,accu2:Int) => accu1 + accu2
-  println("treeAggregate : "+listRdd.treeAggregate(0)(param8,param9))
-  //Output: treeAggregate : 20
 
-  //fold
-  println("fold :  "+listRdd.fold(0){ (acc,v) =>
-    val sum = acc+v
-    sum
-  })
-  //Output: fold :  20
+    //SortByKey
+    println("Sort by Key ==>")
+    val sortRDD = pairRDD.sortByKey()
+    sortRDD.foreach(println)
 
-  println("fold :  "+inputRDD.fold(("Total",0)){(acc:(String,Int),v:(String,Int))=>
-    val sum = acc._2 + v._2
-    ("Total",sum)
-  })
-  //Output: fold :  (Total,181)
+    //reduceByKey
+    println("Reduce by Key ==>")
+    val wordCount = pairRDD.reduceByKey((a,b)=>a+b)
+    wordCount.foreach(println)
 
-  //reduce
-  println("reduce : "+listRdd.reduce(_ + _))
-  //Output: reduce : 20
-  println("reduce alternate : "+listRdd.reduce((x, y) => x + y))
-  //Output: reduce alternate : 20
-  println("reduce : "+inputRDD.reduce((x, y) => ("Total",x._2 + y._2)))
-  //Output: reduce : (Total,181)
+    def param1= (accu:Int,v:Int) => accu + v
+    def param2= (accu1:Int,accu2:Int) => accu1 + accu2
+    println("Aggregate by Key ==> wordcount")
+    val wordCount2 = pairRDD.aggregateByKey(0)(param1,param2)
+    wordCount2.foreach(println)
 
-  //treeReduce. This is similar to reduce
-  println("treeReduce : "+listRdd.treeReduce(_ + _))
-  //Output: treeReduce : 20
+    //keys
+    println("Keys ==>")
+    wordCount2.keys.foreach(println)
 
-  //count, countApprox, countApproxDistinct
-  println("Count : "+listRdd.count)
-  //Output: Count : 20
-  println("countApprox : "+listRdd.countApprox(1200))
-  //Output: countApprox : (final: [7.000, 7.000])
-  println("countApproxDistinct : "+listRdd.countApproxDistinct())
-  //Output: countApproxDistinct : 5
-  println("countApproxDistinct : "+inputRDD.countApproxDistinct())
-  //Output: countApproxDistinct : 5
+    //values
+    println("values ==>")
+    wordCount2.values.foreach(println)
 
-  //countByValue, countByValueApprox
-  println("countByValue :  "+listRdd.countByValue())
-  //Output: countByValue :  Map(5 -> 1, 1 -> 1, 2 -> 2, 3 -> 2, 4 -> 1)
-  //println(listRdd.countByValueApprox())
+    println("Count :"+wordCount2.count())
 
-  //first
-  println("first :  "+listRdd.first())
-  //Output: first :  1
-  println("first :  "+inputRDD.first())
-  //Output: first :  (Z,1)
+    println("collectAsMap ==>")
+    pairRDD.collectAsMap().foreach(println)
 
-  //top
-  println("top : "+listRdd.top(2).mkString(","))
-  //Output: take : 5,4
-  println("top : "+inputRDD.top(2).mkString(","))
-  //Output: take : (Z,1),(C,40)
-
-  //min
-  println("min :  "+listRdd.min())
-  //Output: min :  1
-  println("min :  "+inputRDD.min())
-  //Output: min :  (A,20)
-
-  //max
-  println("max :  "+listRdd.max())
-  //Output: max :  5
-  println("max :  "+inputRDD.max())
-  //Output: max :  (Z,1)
-
-  //take, takeOrdered, takeSample
-  println("take : "+listRdd.take(2).mkString(","))
-  //Output: take : 1,2
-  println("takeOrdered : "+ listRdd.takeOrdered(2).mkString(","))
-  //Output: takeOrdered : 1,2
-  //println("take : "+listRdd.takeSample())
-
-  //toLocalIterator
-  //listRdd.toLocalIterator.foreach(println)
-  //Output:
-
+  }
 }
 ```
 
@@ -398,9 +327,6 @@ object RDDActions extends App {
 
 #### Conclusion:
 
-RDD actions are operations that return non-RDD values, since RDD's are
-lazy they do not execute the transformation functions until we call
-actions. hence, all these functions trigger the transformations to
-execute and finally returns the value of the action functions to the
-driver program. and In this tutorial, you have also learned several RDD
-functions usage and examples in scala language.
+In this tutorial, you have learned **PairRDDFunctions** class and Spark
+Pair RDD transformations & action functions with scala examples.
+

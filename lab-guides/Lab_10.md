@@ -1,270 +1,406 @@
 
 
-Spark RDD Transformations with examples
-=======================================
+Spark RDD Actions with examples
+===============================
+
+
+RDD actions are operations that return the raw values, In other words,
+any RDD function that returns other than RDD\[T\] is considered as an
+action in spark programming. In this tutorial, we will learn RDD actions
+with Scala examples.
 
 
 
-
-RDD Transformations are Spark operations when executed on RDD, it
-results in a single or multiple new RDD's. Since RDD are immutable in
-nature, transformations always create new RDD without updating an
-existing one hence, this creates an **RDD lineage**.
-
-![](./images/rdd-lineage.gif)
-
-*RDD Lineage is also known as the RDD operator graph or RDD dependency
-graph*.
+As mentioned in [RDD Transformations],
+all transformations are lazy meaning they do not get executed right away
+and action functions trigger to execute the transformations.
 
 
-In this tutorial, you will learn lazy transformations, types of
-transformations, a complete list of transformation functions using
-wordcount example in scala.
+Complete code I've used in this article is available at [GitHub project
+for quick
+reference](https://github.com/fenago/spark-scala-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/rdd/RDDActions.scala).
 
 
-RDD Transformations are Lazy
-----------------------------
+RDD Actions Example
+----------------------------------------------------------------------------------
 
-RDD Transformations are lazy operations meaning none of the
-transformations get executed until you call an action on Spark RDD.
-Since RDD's are immutable, any transformations on it result in a new RDD
-leaving the current one unchanged.
+Before we start explaining RDD actions with examples, first, let's
+create an RDD.
 
 
-
-RDD Transformation Types
-------------------------
-
-There are two types are transformations.
-
-### Narrow Transformation
-
-Narrow transformations are the result of
-[map()]
-and
-[filter()]
-functions and these compute data that live on a single partition meaning
-there will not be any data movement between partitions to execute narrow
-transformations.
-
-![](./images/narrow-transformation.png)
-
-Functions such as `map()`, `mapPartition()`, `flatMap()`, `filter()`,
-`union()` are some examples of narrow transformation
-
-
-
-### Wider Transformation
-
-Wider transformations are the result of
-*[groupByKey()]* and *[reduceByKey()]*
-functions and these compute data that live on many partitions meaning
-there will be data movements between partitions to execute wider
-transformations. Since these shuffles the data, they also called shuffle
-transformations.
-
-![](./images/wider-transformation.png)
-
-Functions such as `groupByKey()`, `aggregateByKey()`, `aggregate()`,
-`join()`, `repartition()` are some examples of a wider transformations.
-
-**Note:** When compared to Narrow transformations, wider transformations
-are expensive operations due to shuffling.
-
-
-
-
-Spark RDD Transformations with Examples
----------------------------------------
-
-In this section, I will explain a few RDD Transformations with word
-count example in scala, before we start first, let's [create an RDD by
-reading a text
-file].
-The text file used here is available at the
-[GitHub](https://github.com/fenago/spark-scala-examples/blob/master/src/main/resources/test.txt)
-and, the scala example is available at [GitHub
-project](https://github.com/fenago/spark-scala-examples/blob/master/src/main/scala/com/sparkbyexamples/spark/rdd/WordCountExample.scala)
-for reference.
 
 ```
-val spark:SparkSession = SparkSession.builder()
-      .master("local[3]")
-      .appName("sparkexamples")
-      .getOrCreate()
+  val spark = SparkSession.builder()
+    .appName("SparkByExample")
+    .master("local")
+    .getOrCreate()
 
-val sc = spark.sparkContext
-
-val rdd:RDD[String] = sc.textFile("src/main/scala/test.txt")
+  spark.sparkContext.setLogLevel("ERROR")
+  val inputRDD = spark.sparkContext.parallelize(List(("Z", 1),("A", 20),("B", 30),("C", 40),("B", 30),("B", 60)))
+  
+  val listRdd = spark.sparkContext.parallelize(List(1,2,3,4,5,3,2))
 ```
 
 
 
-![](./images/rdd-transformation-work-count.png)
+Note that we have created two RDD's in the above code snippet and we use
+these two as and when necessary to demonstrate the RDD actions.
 
-flatMap() Transformation
-------------------------
+### aggregate -- action
 
-`flatMap()` transformation flattens the RDD after applying the function
-and returns a new RDD. On the below example, first, it splits each
-record by space in an RDD and finally flattens it. Resulting RDD
-consists of a single word on each record.
+`aggregate()` the elements of each partition, and then the results for
+all the partitions.
 
 ```
-val rdd2 = rdd.flatMap(f=>f.split(" "))
-```
+  //aggregate
+  def param0= (accu:Int, v:Int) => accu + v
+  def param1= (accu1:Int,accu2:Int) => accu1 + accu2
+  println("aggregate : "+listRdd.aggregate(0)(param0,param1))
+  //Output: aggregate : 20
 
-
-
-### map() Transformation
-
-`map()` transformation is used the apply any complex operations like
-adding a column, updating a column e.t.c, the output of map
-transformations would always have the same number of records as input.
-
-In our word count example, we are adding a new column with value 1 for
-each word, the result of the RDD is PairRDDFunctions which contains
-key-value pairs, word of type String as Key and 1 of type Int as value.
-For your understanding, I've defined rdd3 variable with type.
-
-```
-val rdd3:RDD[(String,Int)]= rdd2.map(m=>(m,1))
+  //aggregate
+  def param3= (accu:Int, v:(String,Int)) => accu + v._2
+  def param4= (accu1:Int,accu2:Int) => accu1 + accu2
+  println("aggregate : "+inputRDD.aggregate(0)(param3,param4))
+  //Output: aggregate : 20
 ```
 
 
 
-#### filter() Transformation
+### treeAggregate -- action
 
-`filter()` transformation is used to filter the records in an RDD. In
-our example we are filtering all words starts with "a".
-
-```
-val rdd4 = rdd3.filter(a=> a._1.startsWith("a"))
-```
-
-
-
-### reduceByKey() Transformation
-
-`reduceByKey()` merges the values for each key with the function
-specified. In our example, it reduces the word string by applying the
-sum function on value. The result of our RDD contains unique words and
-their count. 
+`treeAggregate()` -- Aggregates the elements of this RDD in a
+multi-level tree pattern. The output of this function will be similar to
+the aggregate function.
 
 ```
-val rdd5 = rdd3.reduceByKey(_ + _)
+  //treeAggregate. This is similar to aggregate
+  def param8= (accu:Int, v:Int) => accu + v
+  def param9= (accu1:Int,accu2:Int) => accu1 + accu2
+  println("treeAggregate : "+listRdd.treeAggregate(0)(param8,param9))
+  //Output: treeAggregate : 20
 ```
 
 
 
-#### sortByKey() Transformation
+### fold -- action
 
-`sortByKey()` transformation is used to sort RDD elements on key. In our
-example, first, we convert RDD\[(String,Int\]) to RDD\[(Int,String\])
-using map transformation and apply sortByKey which ideally does sort on
-an integer value. And finally, foreach with println statement prints all
-words in RDD and their count as key-value pair to console.
+`fold()` -- Aggregate the elements of each partition, and then the
+results for all the partitions.
 
 ```
-val rdd6 = rdd5.map(a=>(a._2,a._1)).sortByKey()
+  //fold
+  println("fold :  "+listRdd.fold(0){ (acc,v) =>
+    val sum = acc+v
+    sum
+  })
+  //Output: fold :  20
 
-//Print rdd6 result to console
-rdd6.foreach(println)
+  println("fold :  "+inputRDD.fold(("Total",0)){(acc:(String,Int),v:(String,Int))=>
+    val sum = acc._2 + v._2
+    ("Total",sum)
+  })
+  //Output: fold :  (Total,181)
 ```
 
 
 
-Spark RDD Transformations complete example
-------------------------------------------
+### reduce
+
+`reduce()` -- Reduces the elements of the dataset using the specified
+binary operator.
+
+```
+  //reduce
+  println("reduce : "+listRdd.reduce(_ + _))
+  //Output: reduce : 20
+  println("reduce alternate : "+listRdd.reduce((x, y) => x + y))
+  //Output: reduce alternate : 20
+  println("reduce : "+inputRDD.reduce((x, y) => ("Total",x._2 + y._2)))
+  //Output: reduce : (Total,181)
+```
+
+
+
+### treeReduce
+
+`treeReduce()` -- Reduces the elements of this RDD in a multi-level tree
+pattern.
+
+```
+  //treeReduce. This is similar to reduce
+  println("treeReduce : "+listRdd.treeReduce(_ + _))
+  //Output: treeReduce : 20
+```
+
+
+
+### collect
+
+`collect()` -Return the complete dataset as an Array.
+
+```
+  //Collect
+  val data:Array[Int] = listRdd.collect()
+  data.foreach(println)
+```
+
+
+
+### count, countApprox, countApproxDistinct
+
+`count()` -- Return the count of elements in the dataset.
+
+`countApprox()` -- Return approximate count of elements in the dataset,
+this method returns incomplete when execution time meets timeout.
+
+`countApproxDistinct()` -- Return an approximate number of distinct
+elements in the dataset.
+
+```
+  //count, countApprox, countApproxDistinct
+  println("Count : "+listRdd.count)
+  //Output: Count : 20
+  println("countApprox : "+listRdd.countApprox(1200))
+  //Output: countApprox : (final: [7.000, 7.000])
+  println("countApproxDistinct : "+listRdd.countApproxDistinct())
+  //Output: countApproxDistinct : 5
+  println("countApproxDistinct : "+inputRDD.countApproxDistinct())
+  //Output: countApproxDistinct : 5
+```
+
+
+
+### countByValue, countByValueApprox
+
+`countByValue()` -- Return Map\[T,Long\] key representing each unique
+value in dataset and value represents count each value present.
+
+`countByValueApprox()` -- Same as countByValue() but returns approximate
+result.
+
+```
+  //countByValue, countByValueApprox
+  println("countByValue :  "+listRdd.countByValue())
+  //Output: countByValue :  Map(5 -> 1, 1 -> 1, 2 -> 2, 3 -> 2, 4 -> 1)
+  //println(listRdd.countByValueApprox())
+```
+
+
+
+### first
+
+`first()` -- Return the first element in the dataset.
+
+```
+  //first
+  println("first :  "+listRdd.first())
+  //Output: first :  1
+  println("first :  "+inputRDD.first())
+  //Output: first :  (Z,1)
+```
+
+
+
+### top
+
+`top()` -- Return top n elements from the dataset.
+
+Note: Use this method only when the resulting array is small, as all the
+data is loaded into the driver's memory.
+
+```
+  //top
+  println("top : "+listRdd.top(2).mkString(","))
+  //Output: take : 5,4
+  println("top : "+inputRDD.top(2).mkString(","))
+  //Output: take : (Z,1),(C,40)
+```
+
+
+
+### min
+
+`min()` -- Return the minimum value from the dataset.
+
+```
+  //min
+  println("min :  "+listRdd.min())
+  //Output: min :  1
+  println("min :  "+inputRDD.min())
+  //Output: min :  (A,20)
+```
+
+
+
+### max
+
+`max()` -- Return the maximum value from the dataset.
+
+```
+  //max
+  println("max :  "+listRdd.max())
+  //Output: max :  5
+  println("max :  "+inputRDD.max())
+  //Output: max :  (Z,1)
+```
+
+
+
+### take, takeOrdered, takeSample
+
+`take()` -- Return the first num elements of the dataset.
+
+`takeOrdered()` -- Return the first num (smallest) elements from the
+dataset and this is the opposite of the take() action.\
+Note: Use this method only when the resulting array is small, as all the
+data is loaded into the driver's memory.
+
+`takeSample()` -- Return the subset of the dataset in an Array.\
+Note: Use this method only when the resulting array is small, as all the
+data is loaded into the driver's memory.
+
+```
+  //take, takeOrdered, takeSample
+  println("take : "+listRdd.take(2).mkString(","))
+  //Output: take : 1,2
+  println("takeOrdered : "+ listRdd.takeOrdered(2).mkString(","))
+  //Output: takeOrdered : 1,2
+  //println("take : "+listRdd.takeSample())
+```
+
+
+
+Actions -- Complete example
+-------------------------------------------------------------------------------------------------
 
 ```
 package com.sparkbyexamples.spark.rdd
 
-import org.apache.spark.rdd.RDD
+import com.sparkbyexamples.spark.rdd.OperationOnPairRDDComplex.kv
 import org.apache.spark.sql.SparkSession
 
-object WordCountExample {
+import scala.collection.mutable
 
-  def main(args:Array[String]): Unit = {
+object RDDActions extends App {
 
-    val spark:SparkSession = SparkSession.builder()
-      .master("local[3]")
-      .appName("sparkexamples")
-      .getOrCreate()
+  val spark = SparkSession.builder()
+    .appName("SparkByExample")
+    .master("local")
+    .getOrCreate()
 
-    val sc = spark.sparkContext
+  spark.sparkContext.setLogLevel("ERROR")
+  val inputRDD = spark.sparkContext.parallelize(List(("Z", 1),("A", 20),("B", 30),("C", 40),("B", 30),("B", 60)))
 
-    val rdd:RDD[String] = sc.textFile("src/main/resources/test.txt")
-    println("initial partition count:"+rdd.getNumPartitions)
+  val listRdd = spark.sparkContext.parallelize(List(1,2,3,4,5,3,2))
 
-    val reparRdd = rdd.repartition(4)
-    println("re-partition count:"+reparRdd.getNumPartitions)
+  //Collect
+  val data:Array[Int] = listRdd.collect()
+  data.foreach(println)
 
-    //rdd.coalesce(3)
+  //aggregate
+  def param0= (accu:Int, v:Int) => accu + v
+  def param1= (accu1:Int,accu2:Int) => accu1 + accu2
+  println("aggregate : "+listRdd.aggregate(0)(param0,param1))
+  //Output: aggregate : 20
 
-    rdd.collect().foreach(println)
+  //aggregate
+  def param3= (accu:Int, v:(String,Int)) => accu + v._2
+  def param4= (accu1:Int,accu2:Int) => accu1 + accu2
+  println("aggregate : "+inputRDD.aggregate(0)(param3,param4))
+  //Output: aggregate : 20
 
-    // rdd flatMap transformation
-    val rdd2 = rdd.flatMap(f=>f.split(" "))
-    rdd2.foreach(f=>println(f))
+  //treeAggregate. This is similar to aggregate
+  def param8= (accu:Int, v:Int) => accu + v
+  def param9= (accu1:Int,accu2:Int) => accu1 + accu2
+  println("treeAggregate : "+listRdd.treeAggregate(0)(param8,param9))
+  //Output: treeAggregate : 20
 
-    //Create a Tuple by adding 1 to each word
-    val rdd3:RDD[(String,Int)]= rdd2.map(m=>(m,1))
-    rdd3.foreach(println)
+  //fold
+  println("fold :  "+listRdd.fold(0){ (acc,v) =>
+    val sum = acc+v
+    sum
+  })
+  //Output: fold :  20
 
-    //Filter transformation
-    val rdd4 = rdd3.filter(a=> a._1.startsWith("a"))
-    rdd4.foreach(println)
+  println("fold :  "+inputRDD.fold(("Total",0)){(acc:(String,Int),v:(String,Int))=>
+    val sum = acc._2 + v._2
+    ("Total",sum)
+  })
+  //Output: fold :  (Total,181)
 
-    //ReduceBy transformation
-    val rdd5 = rdd3.reduceByKey(_ + _)
-    rdd5.foreach(println)
+  //reduce
+  println("reduce : "+listRdd.reduce(_ + _))
+  //Output: reduce : 20
+  println("reduce alternate : "+listRdd.reduce((x, y) => x + y))
+  //Output: reduce alternate : 20
+  println("reduce : "+inputRDD.reduce((x, y) => ("Total",x._2 + y._2)))
+  //Output: reduce : (Total,181)
 
-    //Swap word,count and sortByKey transformation
-    val rdd6 = rdd5.map(a=>(a._2,a._1)).sortByKey()
-    println("Final Result")
+  //treeReduce. This is similar to reduce
+  println("treeReduce : "+listRdd.treeReduce(_ + _))
+  //Output: treeReduce : 20
 
-    //Action - foreach
-    rdd6.foreach(println)
+  //count, countApprox, countApproxDistinct
+  println("Count : "+listRdd.count)
+  //Output: Count : 20
+  println("countApprox : "+listRdd.countApprox(1200))
+  //Output: countApprox : (final: [7.000, 7.000])
+  println("countApproxDistinct : "+listRdd.countApproxDistinct())
+  //Output: countApproxDistinct : 5
+  println("countApproxDistinct : "+inputRDD.countApproxDistinct())
+  //Output: countApproxDistinct : 5
 
-    //Action - count
-    println("Count : "+rdd6.count())
+  //countByValue, countByValueApprox
+  println("countByValue :  "+listRdd.countByValue())
+  //Output: countByValue :  Map(5 -> 1, 1 -> 1, 2 -> 2, 3 -> 2, 4 -> 1)
+  //println(listRdd.countByValueApprox())
 
-    //Action - first
-    val firstRec = rdd6.first()
-    println("First Record : "+firstRec._1 + ","+ firstRec._2)
+  //first
+  println("first :  "+listRdd.first())
+  //Output: first :  1
+  println("first :  "+inputRDD.first())
+  //Output: first :  (Z,1)
 
-    //Action - max
-    val datMax = rdd6.max()
-    println("Max Record : "+datMax._1 + ","+ datMax._2)
+  //top
+  println("top : "+listRdd.top(2).mkString(","))
+  //Output: take : 5,4
+  println("top : "+inputRDD.top(2).mkString(","))
+  //Output: take : (Z,1),(C,40)
 
-    //Action - reduce
-    val totalWordCount = rdd6.reduce((a,b) => (a._1+b._1,a._2))
-    println("dataReduce Record : "+totalWordCount._1)
-    //Action - take
-    val data3 = rdd6.take(3)
-    data3.foreach(f=>{
-      println("data3 Key:"+ f._1 +", Value:"+f._2)
-    })
+  //min
+  println("min :  "+listRdd.min())
+  //Output: min :  1
+  println("min :  "+inputRDD.min())
+  //Output: min :  (A,20)
 
-    //Action - collect
-    val data = rdd6.collect()
-    data.foreach(f=>{
-      println("Key:"+ f._1 +", Value:"+f._2)
-    })
+  //max
+  println("max :  "+listRdd.max())
+  //Output: max :  5
+  println("max :  "+inputRDD.max())
+  //Output: max :  (Z,1)
 
-    //Action - saveAsTextFile
-    rdd5.saveAsTextFile("c:/tmp/wordCount")
-    
-  }
+  //take, takeOrdered, takeSample
+  println("take : "+listRdd.take(2).mkString(","))
+  //Output: take : 1,2
+  println("takeOrdered : "+ listRdd.takeOrdered(2).mkString(","))
+  //Output: takeOrdered : 1,2
+  //println("take : "+listRdd.takeSample())
+
+  //toLocalIterator
+  //listRdd.toLocalIterator.foreach(println)
+  //Output:
+
 }
 ```
 
 
 
-#### Conclusion
+#### Conclusion:
 
-In this Spark RDD Transformations tutorial, you have learned different
-transformation functions and their usage with scala examples and GitHub
-project for quick reference.
-
+RDD actions are operations that return non-RDD values, since RDD's are
+lazy they do not execute the transformation functions until we call
+actions. hence, all these functions trigger the transformations to
+execute and finally returns the value of the action functions to the
+driver program. and In this tutorial, you have also learned several RDD
+functions usage and examples in scala language.

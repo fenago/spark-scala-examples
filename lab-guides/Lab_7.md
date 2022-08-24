@@ -1,231 +1,140 @@
 
 
-Spark Load CSV File into RDD
-============================
-
-In this tutorial, I will explain how to load a CSV file into Spark RDD
-using a Scala example. Using the textFile() the method in
-[SparkContext]
-class we can read CSV files, multiple CSV files (based on pattern
-matching), or all files from a directory into RDD \[String\] object.
+Different ways to create Spark RDD
+==================================
 
 
-
-Before we start, let's assume we have the following CSV file names with
-comma delimited file contents at folder "c:/tmp/files" and I use these
-files to demonstrate the examples.
-
-  -----------------------------------------------------------------------
-  File Name                           File Contents
-  ----------------------------------- -----------------------------------
-  text01.csv                          Col1,Col2\
-                                      One,1\
-                                      Eleven,11
-
-  text02.csv                          Col1,Col2\
-                                      Two,2\
-                                      Twenty One,21
-
-  text03.csv                          Col1,Col2\
-                                      Three,3
-
-  text04.csv                          Col1,Col2\
-                                      Four,4
-
-  invalid.csv                         Col1,Col2\
-                                      Invalid,I
-  -----------------------------------------------------------------------
+Spark RDD can be created in several ways using Scala & Pyspark
+languages, for example, It can be created by using
+sparkContext.parallelize(), from text file, from another RDD, DataFrame,
+and Dataset. Though we have covered most of the examples in Scala here,
+the same concept can be used to create RDD in PySpark (Python Spark)
 
 
 
-Load CSV file into RDD
-----------------------------------------------------------------------------------------
+**Resilient Distributed Datasets (RDD**) is the fundamental data
+structure of Spark. RDDs are immutable and fault-tolerant in nature. RDD
+is just the way of representing Dataset distributed across multiple
+nodes in a cluster, which can be operated in parallel. RDDs are called
+resilient because they have the ability to always re-compute an RDD when
+a node failure.
 
-textFile() method read an entire CSV record as a String and returns
-RDD\[String\], hence, we need to write additional code in Spark to
-transform RDD\[String\] to RDD\[Array\[String\]\] by splitting the
-string record with a delimiter.
+Note that once we create an RDD, we can easily [create a
+DataFrame]
+from RDD.
 
 
 
-The below example reads a file into "rddFromFile" RDD object, and each
-element in RDD represents as a String.
+Let's see how to create an RDD in Apache Spark with examples:
+
+-   [Spark create RDD from Seq or List
+     (using Parallelize)](#from-parallelize)
+-   [Creating an RDD from a text
+    file](#from-text)
+-   [Creating from another
+    RDD](#from-rdd)
+-   [Creating from existing DataFrames and
+    DataSet](#from-dataframe-dataset)
+
+Spark Create RDD from Seq or List (using Parallelize)
+----------------------------------------------------------------------------------------------------------------------------------------------------
+
+RDD's are generally created by parallelized collection i.e. by taking an
+existing collection from driver program (scala, python e.t.c) and
+passing it to SparkContext's `parallelize()` method. This method is used
+only for testing but not in realtime as the entire data will reside on
+one node which is not ideal for production.
 
 ```
-  val rddFromFile = spark.sparkContext.textFile("C:/tmp/files/text01.txt")
+val rdd=spark.sparkContext.parallelize(Seq(("Java", 20000), 
+  ("Python", 100000), ("Scala", 3000)))
+rdd.foreach(println)
 ```
 
 
 
-But, we would need every record in a CSV to split by comma delimiter and
-store it in RDD as multiple columns, In order to achieve this, we should
-use `map()` transformation on RDD where we will convert RDD\[String\] to
-RDD\[Array\[String\] by splitting every record by comma delimiter. map()
-method returns a new RDD instead of updating existing.
+Outputs:
 
-```
- val rdd = rddFromFile.map(f=>{
-    f.split(",")
-  })
-```
-
-
-
-Now, read the data from rdd by using `foreach`, since the elements in
-RDD are array, we need to use the index to retrieve each element from an
-array.
 
 
 
 ```
-  rdd.foreach(f=>{
-    println("Col1:"+f(0)+",Col2:"+f(1))
-  })
+(Python,100000)
+(Scala,3000)
+(Java,20000)
 ```
 
 
 
-Note that the output we get from the above "println" also contains
-header names from a CSV file as header considered as data itself in RDD.
-We need to skip the header while processing the data. This is where the
-DataFrame comes handy to read CSV file with a header and handles a lot
-more options and file formats.
+Create an RDD from a text file
+--------------------------------------------------------------------------------------------------------
+
+Mostly for production systems, we create RDD's from files. here will see
+how to create an RDD by reading data from a file.
 
 ```
-Col1:col1,Col2:col2
-Col1:One,Col2:1
-Col1:Eleven,Col2:11
+val rdd = spark.sparkContext.textFile("/path/textFile.txt")
 ```
 
 
 
-Let's see how to collect the data from RDD using `collect()`. In this
-case, collect() method returns Array\[Array\[String\]\] type where the
-first Array represents the RDD data and inner array is a record.
+This creates an RDD for which each record represents a line in a file.
+
+If you want to read the entire content of a file as a single record use
+wholeTextFiles() method on sparkContext.
 
 ```
-  rdd.collect().foreach(f=>{
-    println("Col1:"+f(0)+",Col2:"+f(1))
-  })
+val rdd2 = spark.sparkContext.wholeTextFiles("/path/textFile.txt")
+rdd2.foreach(record=>println("FileName : "+record._1+", FileContents :"+record._2))
 ```
 
 
 
-This example also yields the same as the above output.
+In this case, each text file is a single record. In this, the name of
+the file is the first column and the value of the text file is the
+second column.
 
-
-
-
-
-
-Skip Header From CSV file
+Creating from another RDD
 ----------------------------------------------------------------------------------------------
 
-When you have a header with column names in a CSV file and to read and
-process with Spark RDD, you need to skip the header as there is no way
-in RDD to specify your file has a header.
-
-rdd.mapPartitionsWithIndex { (idx, iter) =\> if (idx == 0) iter.drop(1)
-else iter }
-
-Read Multiple CSV Files into RDD
-------------------------------------------------------------------------------------------------------------
-
-To read multiple CSV files in Spark, just use textFile() method on
-[SparkContext]
-object by passing all file names comma separated. The below example
-reads text01.csv & text02.csv files into single RDD.
+You can use transformations like map, flatmap, filter to create a new
+RDD from an existing one.
 
 ```
-  val rdd4 = spark.sparkContext.textFile("C:/tmp/files/text01.csv,C:/tmp/files/text02.csv")
-  rdd4.foreach(f=>{
-    println(f)
-  })
+val rdd3 = rdd.map(row=>{(row._1,row._2+100)})
 ```
 
 
 
-Read all CSV Files in a Directory into RDD
---------------------------------------------------------------------------------------------------------------------------------
+Above, creates a new RDD "rdd3" by adding 100 to each record on RDD.
+this example outputs below.
 
-To read all CSV files in a directory or folder, just pass a directory
-path to the testFile() method.
 
 ```
-  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/*")
-  rdd3.foreach(f=>{
-    println(f)
-  })
+(Python,100100)
+(Scala,3100)
+(Java,20100)
 ```
 
 
 
-### Complete example
+**From existing DataFrames and DataSet**
+------------------------------------------------------------------------------------------------------------------------
+
+To convert DataSet or DataFrame to RDD just use `rdd()` method on any of
+these data types.
 
 ```
-package com.sparkbyexamples.spark.rdd
-
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.SparkSession
-
-object ReadMultipleCSVFiles extends App {
-
-  val spark:SparkSession = SparkSession.builder()
-    .master("local[1]")
-    .appName("sparkexamples")
-    .getOrCreate()
-
-  spark.sparkContext.setLogLevel("ERROR")
-
-  println("spark read csv files from a directory into RDD")
-  val rddFromFile = spark.sparkContext.textFile("C:/tmp/files/text01.csv")
-  println(rddFromFile.getClass)
-
-  val rdd = rddFromFile.map(f=>{
-    f.split(",")
-  })
-
-  println("Iterate RDD")
-  rdd.foreach(f=>{
-    println("Col1:"+f(0)+",Col2:"+f(1))
-  })
-  println(rdd)
-
-  println("Get data Using collect")
-  rdd.collect().foreach(f=>{
-    println("Col1:"+f(0)+",Col2:"+f(1))
-  })
-
-  println("read all csv files from a directory to single RDD")
-  val rdd2 = spark.sparkContext.textFile("C:/tmp/files/*")
-  rdd2.foreach(f=>{
-    println(f)
-  })
-
-  println("read csv files base on wildcard character")
-  val rdd3 = spark.sparkContext.textFile("C:/tmp/files/text*.csv")
-  rdd3.foreach(f=>{
-    println(f)
-  })
-
-  println("read multiple csv files into a RDD")
-  val rdd4 = spark.sparkContext.textFile("C:/tmp/files/text01.csv,C:/tmp/files/text02.csv")
-  rdd4.foreach(f=>{
-    println(f)
-  })
-
-}
+val myRdd2 = spark.range(20).toDF().rdd
 ```
 
 
 
-This complete example can be downloaded from [GitHub
-project](https://github.com/sparkbyexamples/spark-examples/blob/bfef54903032637b3b8d92591c64908fcad15369/spark-sql-examples/src/main/scala/com/sparkbyexamples/spark/rdd/ReadMultipleCSVFiles.scala)
+toDF() creates a DataFrame and by calling rdd on DataFrame returns back
+RDD.\
 
-### Conclusion
+#### Conclusion:
 
-In this tutorial you have learned how to read a single CSV file,
-multiples CSV files and reading all CSV files from a directory/folder
-into a single Spark RDD. You have also learned how to skip the header
-while reading CSV files into RDD.
+In this article, you have learned creating Spark RDD from list or seq,
+text file, from another RDD, DataFrame, and Dataset.
 

@@ -1,140 +1,187 @@
 
 
-Different ways to create Spark RDD
-==================================
+Spark -- How to create an empty RDD?
+====================================
 
 
-Spark RDD can be created in several ways using Scala & Pyspark
-languages, for example, It can be created by using
-sparkContext.parallelize(), from text file, from another RDD, DataFrame,
-and Dataset. Though we have covered most of the examples in Scala here,
-the same concept can be used to create RDD in PySpark (Python Spark)
+We often need to create empty RDD in Spark, and empty RDD can be created
+in several ways, for example, with partition, without partition, and
+with pair RDD. In this article, we will see these with Scala, Java and
+Pyspark examples.
 
 
 
-**Resilient Distributed Datasets (RDD**) is the fundamental data
-structure of Spark. RDDs are immutable and fault-tolerant in nature. RDD
-is just the way of representing Dataset distributed across multiple
-nodes in a cluster, which can be operated in parallel. RDDs are called
-resilient because they have the ability to always re-compute an RDD when
-a node failure.
+Spark sc.emptyRDD -- Creates empty RDD with no partition
+----------------------------------------------------------------------------------------------------------------------------------------------------------
 
-Note that once we create an RDD, we can easily [create a
+In Spark, using `emptyRDD()` function on the SparkContext object creates
+an empty RDD with no partitions or elements. The below examples create
+an empty RDD.
+
+```
+val spark:SparkSession = SparkSession.builder()
+    .master("local[3]")
+    .appName("sparkexamples")
+    .getOrCreate()
+val rdd = spark.sparkContext.emptyRDD // creates EmptyRDD[0]
+val rddString = spark.sparkContext.emptyRDD[String] // creates EmptyRDD[1]
+println(rdd)
+println(rddString)
+println("Num of Partitions: "+rdd.getNumPartitions) // returns o partition
+```
+
+
+
+From the above `spark.sparkContext.emptyRDD` creates an EmptyRDD\[0\]
+and `spark.sparkContext.emptyRDD[String]` creates EmptyRDD\[1\] of
+String type. And both of these empty RDD's created with 0 partitions.
+Statements println() from this example yields below output.
+
+
+
+```
+EmptyRDD[0] at emptyRDD at CreateEmptyRDD.scala:12
+EmptyRDD[1] at emptyRDD at CreateEmptyRDD.scala:13
+Num of Partitions: 0
+```
+
+
+
+Note that writing an empty RDD creates a folder with .\_SUCCESS.crc file
+and \_SUCCESS file with zero size.
+
+```
+rdd.saveAsTextFile("test.txt")
+//outputs
+java.io.IOException: (null) entry in command string: null chmod 0644
+```
+
+
+
+Once we have empty RDD, we can easily [create an empty
 DataFrame]
-from RDD.
+from rdd object.
 
+Create an Empty RDD with Partition
+----------------------------------------------------------------------------------------------------------------
 
-
-Let's see how to create an RDD in Apache Spark with examples:
-
--   [Spark create RDD from Seq or List
-     (using Parallelize)](#from-parallelize)
--   [Creating an RDD from a text
-    file](#from-text)
--   [Creating from another
-    RDD](#from-rdd)
--   [Creating from existing DataFrames and
-    DataSet](#from-dataframe-dataset)
-
-Spark Create RDD from Seq or List (using Parallelize)
-----------------------------------------------------------------------------------------------------------------------------------------------------
-
-RDD's are generally created by parallelized collection i.e. by taking an
-existing collection from driver program (scala, python e.t.c) and
-passing it to SparkContext's `parallelize()` method. This method is used
-only for testing but not in realtime as the entire data will reside on
-one node which is not ideal for production.
-
-```
-val rdd=spark.sparkContext.parallelize(Seq(("Java", 20000), 
-  ("Python", 100000), ("Scala", 3000)))
-rdd.foreach(println)
-```
-
-
-
-Outputs:
-
+Using Spark sc.parallelize() we can create an empty RDD with partitions,
+writing partitioned RDD to a file results in the creation of multiple
+part files.
 
 
 
 ```
-(Python,100000)
-(Scala,3000)
-(Java,20000)
+  val rdd2 = spark.sparkContext.parallelize(Seq.empty[String])
+  println(rdd2)
+  println("Num of Partitions: "+rdd2.getNumPartitions)
 ```
 
 
 
-Create an RDD from a text file
---------------------------------------------------------------------------------------------------------
-
-Mostly for production systems, we create RDD's from files. here will see
-how to create an RDD by reading data from a file.
+From the above `spark.sparkContext.parallelize(Seq.empty[String])`
+creates an `ParallelCollectionRDD[2]` with 3 partitions.
 
 ```
-val rdd = spark.sparkContext.textFile("/path/textFile.txt")
+ParallelCollectionRDD[2] at parallelize at CreateEmptyRDD.scala:21
+Num of Partitions: 3
 ```
 
 
 
-This creates an RDD for which each record represents a line in a file.
-
-If you want to read the entire content of a file as a single record use
-wholeTextFiles() method on sparkContext.
+Here is another example using `sc.parallelize()`
 
 ```
-val rdd2 = spark.sparkContext.wholeTextFiles("/path/textFile.txt")
-rdd2.foreach(record=>println("FileName : "+record._1+", FileContents :"+record._2))
+val emptyRDD = sc.parallelize(Seq(""))
 ```
 
 
 
-In this case, each text file is a single record. In this, the name of
-the file is the first column and the value of the text file is the
-second column.
+Creating an Empty pair RDD
+------------------------------------------------------------------------------------------------
 
-Creating from another RDD
+Most we use RDD with pair hence, here is another example of creating an
+RDD with pair. This example creates an empty RDD with String & Int pair.
+
+```
+type pairRDD = (String,Int)
+var resultRDD = sparkContext.emptyRDD[pairRDD]
+```
+
+
+
+Yields below output.
+
+```
+EmptyRDD[3] at emptyRDD at CreateEmptyRDD.scala:30
+```
+
+
+
+Java -- creating an empty RDD
+-----------------------------------------------------------------------------------------------------
+
+Similar to Scala, In Java also we can create an empty RDD by call
+`emptyRDD()` function on JavaSparkContext object.
+
+
+```
+JavaSparkContext jsc;
+// create java spark context and assign it to jsc object.
+JavaRDD<T> emptyRDD = jsc.emptyRDD();
+```
+
+
+
+PySpark -- creating an empty RDD
+-----------------------------------------------------------------------------------------------------------
+
+Complete example in Scala
 ----------------------------------------------------------------------------------------------
 
-You can use transformations like map, flatmap, filter to create a new
-RDD from an existing one.
+The complete code can also refer from
+[GitHub](https://github.com/sparkbyexamples/spark-examples/blob/master/spark-sql-examples/src/main/scala/com/sparkbyexamples/spark/rdd/CreateEmptyRDD.scala)
+project
 
 ```
-val rdd3 = rdd.map(row=>{(row._1,row._2+100)})
+package com.sparkbyexamples.spark.rdd
+
+import org.apache.spark.sql.SparkSession
+
+object CreateEmptyRDD extends App{
+
+  val spark:SparkSession = SparkSession.builder()
+    .master("local[3]")
+    .appName("sparkexamples")
+    .getOrCreate()
+
+  val rdd = spark.sparkContext.emptyRDD // creates EmptyRDD[0]
+  val rddString = spark.sparkContext.emptyRDD[String] // creates EmptyRDD[1]
+
+  println(rdd)
+  println(rddString)
+  println("Num of Partitions: "+rdd.getNumPartitions) // returns o partition
+
+  //rddString.saveAsTextFile("test.txt") 
+
+  val rdd2 = spark.sparkContext.parallelize(Seq.empty[String])
+  println(rdd2)
+  println("Num of Partitions: "+rdd2.getNumPartitions)
+
+  //rdd2.saveAsTextFile("test2.txt")
+
+  // Pair RDD
+
+  type dataType = (String,Int)
+  var pairRDD = spark.sparkContext.emptyRDD[dataType]
+  println(pairRDD)
+
+}
 ```
 
 
 
-Above, creates a new RDD "rdd3" by adding 100 to each record on RDD.
-this example outputs below.
-
-
-```
-(Python,100100)
-(Scala,3100)
-(Java,20100)
-```
-
-
-
-**From existing DataFrames and DataSet**
-------------------------------------------------------------------------------------------------------------------------
-
-To convert DataSet or DataFrame to RDD just use `rdd()` method on any of
-these data types.
-
-```
-val myRdd2 = spark.range(20).toDF().rdd
-```
-
-
-
-toDF() creates a DataFrame and by calling rdd on DataFrame returns back
-RDD.\
-
-#### Conclusion:
-
-In this article, you have learned creating Spark RDD from list or seq,
-text file, from another RDD, DataFrame, and Dataset.
+In this article, you have learned how to create an empty RDD in Spark
+with partition, no partition and finally with pair RDD. Hope it helps
+you.
 
