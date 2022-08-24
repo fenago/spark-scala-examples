@@ -8,7 +8,7 @@ object RenameDeleteFile extends App{
 
   val spark:SparkSession = SparkSession.builder()
     .master("local[3]")
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .getOrCreate()
 
   //Create Hadoop Configuration from Spark

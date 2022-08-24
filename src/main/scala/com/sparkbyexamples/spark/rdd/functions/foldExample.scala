@@ -5,7 +5,7 @@ import org.apache.spark.sql.SparkSession
 object foldExample extends App {
 
   val spark = SparkSession.builder()
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .master("local[3]")
     .getOrCreate()
 

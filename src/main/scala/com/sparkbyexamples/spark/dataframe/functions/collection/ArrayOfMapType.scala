@@ -6,7 +6,7 @@ import org.apache.spark.sql.functions.{explode}
 import org.apache.spark.sql.types._
 
 object ArrayOfMapType extends App {
-  val spark = SparkSession.builder().appName("SparkByExamples.com")
+  val spark = SparkSession.builder().appName("SparkExamples")
     .master("local[1]")
     .getOrCreate()
 

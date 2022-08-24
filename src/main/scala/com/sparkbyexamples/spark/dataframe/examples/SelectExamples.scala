@@ -7,7 +7,7 @@ object SelectExamples extends App{
 
   val spark = SparkSession.builder
     .master("local[1]")
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .getOrCreate()
 
   val data = Seq(("James","Smith","USA","CA"),

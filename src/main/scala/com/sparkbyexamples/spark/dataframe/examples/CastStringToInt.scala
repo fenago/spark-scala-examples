@@ -6,7 +6,7 @@ object CastStringToInt extends App {
 
   val spark = SparkSession.builder
       .master("local[1]")
-      .appName("SparkByExamples.com")
+      .appName("SparkExamples")
       .getOrCreate()
 
   val simpleData = Seq(("James",34,"true","M","3000.6089"),

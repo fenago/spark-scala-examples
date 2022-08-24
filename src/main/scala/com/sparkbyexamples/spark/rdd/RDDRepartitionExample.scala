@@ -6,7 +6,7 @@ object RDDRepartitionExample extends App {
 
   val spark:SparkSession = SparkSession.builder()
     .master("local[5]")
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .getOrCreate()
 
   val rdd = spark.sparkContext.parallelize(Range(0,20))

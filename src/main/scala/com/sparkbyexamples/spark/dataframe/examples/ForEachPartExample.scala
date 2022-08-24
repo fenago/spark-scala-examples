@@ -6,7 +6,7 @@
 //
 //  val spark: SparkSession = SparkSession.builder()
 //    .master("local[1]")
-//    .appName("SparkByExamples.com")
+//    .appName("SparkExamples")
 //    .getOrCreate()
 //
 //  val data = Seq(("Banana",1000,"USA"), ("Carrots",1500,"USA"), ("Beans",1600,"USA"),

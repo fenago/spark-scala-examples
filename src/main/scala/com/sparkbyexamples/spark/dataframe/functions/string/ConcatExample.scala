@@ -5,7 +5,7 @@ import org.apache.spark.sql.functions.{lit, _}
 object ConcatExample extends App {
 
   val spark = SparkSession.builder()
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .master("local")
     .getOrCreate()
 

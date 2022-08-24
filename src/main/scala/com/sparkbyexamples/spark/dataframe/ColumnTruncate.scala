@@ -8,7 +8,7 @@ object ColumnTruncate extends App {
 
   val spark:SparkSession = SparkSession.builder()
     .master("local[1]")
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .getOrCreate()
 
 

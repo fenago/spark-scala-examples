@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.{IntegerType, StringType, StructField, StructT
 
     val spark: SparkSession = SparkSession.builder()
       .master("local[1]")
-      .appName("SparkByExamples.com")
+      .appName("SparkExamples")
       .getOrCreate()
     import spark.implicits._
 

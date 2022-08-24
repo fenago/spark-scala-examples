@@ -6,7 +6,7 @@ import org.apache.spark.sql.types.{ArrayType, IntegerType, MapType, StringType, 
 
 object ExplodeArrayAndMap extends App{
 
-    val spark = SparkSession.builder().appName("SparkByExamples.com")
+    val spark = SparkSession.builder().appName("SparkExamples")
       .master("local[1]")
       .getOrCreate()
 

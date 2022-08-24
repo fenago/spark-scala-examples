@@ -11,7 +11,7 @@ import org.apache.spark.sql.functions._
 object CastColumnType extends App {
   val spark: SparkSession = SparkSession.builder()
     .master("local[1]")
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .getOrCreate()
 
   val simpleData = Seq(Row("James", 34, "2006-01-01", "true", "M", 3000.60),

@@ -18,7 +18,7 @@ object AvroExample {
 
 
     val spark: SparkSession = SparkSession.builder().master("local[1]")
-      .appName("SparkByExamples.com")
+      .appName("SparkExamples")
       .getOrCreate()
 
     val data = Seq(("James ", "", "Smith", 2018, 1, "M", 3000),

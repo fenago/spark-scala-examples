@@ -6,7 +6,7 @@ import org.apache.spark.sql.functions.{col, split}
 object StringToArray extends App {
 
   val spark = SparkSession.builder()
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .master("local")
     .getOrCreate()
 

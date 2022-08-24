@@ -9,7 +9,7 @@ object WithColumn {
 
     val spark: SparkSession = SparkSession.builder()
       .master("local[1]")
-      .appName("SparkByExamples.com")
+      .appName("SparkExamples")
       .getOrCreate()
 
     val dataRows = Seq(Row(Row("James;","","Smith"),"36636","M","3000"),

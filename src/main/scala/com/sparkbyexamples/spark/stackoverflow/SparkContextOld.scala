@@ -4,7 +4,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 
 object SparkContextOld extends App{
 
-  val conf = new SparkConf().setAppName("sparkbyexamples.com").setMaster("local[1]")
+  val conf = new SparkConf().setAppName("SparkExamples").setMaster("local[1]")
   val sparkContext = new SparkContext(conf)
   val rdd = sparkContext.textFile("/src/main/resources/text/alice.txt")
 
@@ -17,7 +17,7 @@ object SparkContextOld extends App{
   println("Master :"+sparkContext.applicationId)
  // sparkContext.stop()
 
-  val conf2 = new SparkConf().setAppName("sparkbyexamples.com-2").setMaster("local[1]")
+  val conf2 = new SparkConf().setAppName("SparkExamples-2").setMaster("local[1]")
   val sparkContext2 = new SparkContext(conf2)
 
   println("Second SparkContext:")

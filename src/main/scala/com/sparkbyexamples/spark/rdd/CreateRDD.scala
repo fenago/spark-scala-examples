@@ -8,7 +8,7 @@ object CreateRDD {
 
     val spark:SparkSession = SparkSession.builder()
       .master("local[3]")
-      .appName("SparkByExamples.com")
+      .appName("SparkExamples")
       .getOrCreate()
 
     val rdd=spark.sparkContext.parallelize(Seq(("Java", 20000), ("Python", 100000), ("Scala", 3000)))

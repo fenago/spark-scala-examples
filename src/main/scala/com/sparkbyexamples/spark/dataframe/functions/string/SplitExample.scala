@@ -7,7 +7,7 @@ import org.apache.spark.sql.types.{ArrayType, DataType, DataTypes}
 object SplitExample extends App{
 
   val spark = SparkSession.builder()
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .master("local")
     .getOrCreate()
 

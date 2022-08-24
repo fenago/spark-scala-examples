@@ -8,7 +8,7 @@ object DataFrameWithSQL_ {
 
     val spark: SparkSession = SparkSession.builder()
       .master("local[1]")
-      .appName("SparkByExamples.com")
+      .appName("SparkExamples")
       .getOrCreate()
 
     val data = Seq(1,2,3)

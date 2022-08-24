@@ -7,7 +7,7 @@ object GetTimeFromTimestamp extends App {
 
   val spark:SparkSession = SparkSession.builder()
     .master("local")
-    .appName("SparkByExamples.com")
+    .appName("SparkExamples")
     .getOrCreate()
   spark.sparkContext.setLogLevel("ERROR")
 

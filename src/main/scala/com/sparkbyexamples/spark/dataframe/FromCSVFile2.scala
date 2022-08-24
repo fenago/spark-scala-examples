@@ -8,7 +8,7 @@ object FromCSVFile2 {
 
     val spark: SparkSession = SparkSession.builder()
       .master("local[1]")
-      .appName("SparkByExamples.com")
+      .appName("SparkExamples")
       .getOrCreate()
 
     val filePath="src/main/resources/stream.csv"

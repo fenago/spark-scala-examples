@@ -6,7 +6,7 @@ import org.apache.spark.sql.{Row, SparkSession}
 
 object ArrayOfStructType extends App{
 
-  val spark = SparkSession.builder().appName("SparkByExamples.com")
+  val spark = SparkSession.builder().appName("SparkExamples")
     .master("local[1]")
     .getOrCreate()
 

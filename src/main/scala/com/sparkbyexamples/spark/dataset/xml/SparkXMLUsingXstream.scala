@@ -10,7 +10,7 @@ object SparkXMLUsingXStream{
   def main(args: Array[String]): Unit = {
     val spark = SparkSession.
     builder.master ("local[*]")
-    .appName ("sparkbyexamples.com")
+    .appName ("SparkExamples")
     .getOrCreate ()
 
     var animal:Animal = Animal("Rugissement",150)
