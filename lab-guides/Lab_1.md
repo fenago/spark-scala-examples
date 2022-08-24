@@ -47,13 +47,8 @@ https://github.com/fenago/spark-scala-examples.git
 ```
 
 
--   If you don't have **Git** installed, select the "**Download and
-    Install" option from the** above window.
--   After Git installation, select the **clone** option which clones the
-    project into your given folder.
 -   This creates a new project on IntelliJ and starts cloning.
--   Now, wait for a few mins to complete the clone and also import the
-    project into the workspace.
+-   Now, wait for a few mins to complete the clone and installation of packages.
 
 Once the cloning completes, you will see the following project workspace
 structure on IntelliJ.
